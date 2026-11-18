@@ -946,7 +946,9 @@ namespace LoqRgb
             if (!ok)
             {
                 statusLabel.ForeColor = Theme.Bad;
-                statusLabel.Text = "●  Keyboard not found";
+                statusLabel.Text = message != null && message.Contains("per-key")
+                    ? "●  Per-key RGB keyboard: not supported yet"
+                    : "●  Keyboard not found";
             }
             else if (message != null)
             {

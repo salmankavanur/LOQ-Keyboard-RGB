@@ -87,6 +87,59 @@ namespace LoqRgb
             ProductId = pid;
         }
 
+        /// <summary>
+        /// Looks for Lenovo keyboard controllers this app can't drive yet, to explain why no keyboard was found.
+        /// Read-only: it only inspects HID descriptors and never sends anything to the device.
+        /// </summary>
+        public static string DescribeUnsupported()
+        {
+            string found = null;
+            ForEachHid(path =>
+            {
+                using (SafeFileHandle probe = Native.CreateFile(path, 0, Native.FILE_SHARE_READ_WRITE, IntPtr.Zero, Native.OPEN_EXISTING, 0, IntPtr.Zero))
+                {
+                    if (probe.IsInvalid) return false;
+                    var attr = new Native.HIDD_ATTRIBUTES();
+                    attr.Size = Marshal.SizeOf(attr);
+                    if (!Native.HidD_GetAttributes(probe, ref attr) || attr.VendorID != VendorId || (attr.ProductID & ProductMask) != ProductFamily) return false;
+                    IntPtr pre;
+                    if (!Native.HidD_GetPreparsedData(probe, out pre)) return false;
+                    Native.HIDP_CAPS caps;
+                    try { Native.HidP_GetCaps(pre, out caps); }
+                    finally { Native.HidD_FreePreparsedData(pre); }
+                    if (caps.UsagePage == UsagePage && caps.FeatureReportByteLength == 960)
+                    {
+                        found = string.Format("This laptop has a per-key RGB (\"Spectrum\") keyboard (ITE 048D:{0:X4}). Only 4-zone RGB keyboards are supported so far.", attr.ProductID);
+                        return true;
+                    }
+                }
+                return false;
+            });
+            return found ?? "No Lenovo 4-zone RGB keyboard was found. Keyboards with a white-only backlight are controlled by Lenovo's driver (Fn+Space) and aren't supported.";
+        }
+
+        static void ForEachHid(Func<string, bool> visit)
+        {
+            Guid guid;
+            Native.HidD_GetHidGuid(out guid);
+            IntPtr set = Native.SetupDiGetClassDevs(ref guid, IntPtr.Zero, IntPtr.Zero, Native.DIGCF_PRESENT | Native.DIGCF_DEVICEINTERFACE);
+            if (set == new IntPtr(-1)) return;
+            try
+            {
+                var data = new Native.SP_DEVICE_INTERFACE_DATA();
+                data.cbSize = Marshal.SizeOf(data);
+                for (int i = 0; Native.SetupDiEnumDeviceInterfaces(set, IntPtr.Zero, ref guid, i, ref data); i++)
+                {
+                    string path = GetPath(set, ref data);
+                    if (path != null && visit(path)) return;
+                }
+            }
+            finally
+            {
+                Native.SetupDiDestroyDeviceInfoList(set);
+            }
+        }
+
         public static RgbKeyboard Find()
         {
             Guid guid;
@@ -177,6 +230,7 @@ namespace LoqRgb
     public sealed class KeyboardController : IDisposable
     {
         RgbKeyboard device;
+        string unsupportedReason; // why no supported keyboard was found (computed once)
 
         public string DeviceName
         {
@@ -199,7 +253,12 @@ namespace LoqRgb
                     catch (Exception ex) { error = ex.Message; return false; }
                     if (device == null)
                     {
-                        error = "No Lenovo 4-zone RGB keyboard controller (ITE 048D:C9xx, usage page 0xFF89) was found.";
+                        if (unsupportedReason == null)
+                        {
+                            try { unsupportedReason = RgbKeyboard.DescribeUnsupported(); }
+                            catch { unsupportedReason = "No Lenovo 4-zone RGB keyboard was found."; }
+                        }
+                        error = unsupportedReason;
                         return false;
                     }
                 }
