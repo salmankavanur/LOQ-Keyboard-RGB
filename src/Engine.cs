@@ -219,6 +219,9 @@ namespace LoqRgb
                 case Effect.Audio: return new AudioSource();
                 case Effect.Ambient: return new AmbientSource();
                 case Effect.Monitor: return new MonitorSource();
+                case Effect.Drift:
+                case Effect.Fade:
+                case Effect.Strobe: return new AnimationSource(e);
                 default: return new SolidSource();
             }
         }

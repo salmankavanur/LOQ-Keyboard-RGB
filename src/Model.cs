@@ -13,7 +13,7 @@ namespace LoqRgb
     public enum Effect
     {
         Off = 0, Static = 1, Breath = 3, Wave = 4, Smooth = 6,
-        Audio = 100, Ambient = 101, Monitor = 102
+        Audio = 100, Ambient = 101, Monitor = 102, Drift = 103, Fade = 104, Strobe = 105
     }
 
     public static class Effects
@@ -27,13 +27,15 @@ namespace LoqRgb
 
         public static bool UsesSpeed(Effect e)
         {
-            return e == Effect.Breath || e == Effect.Wave || e == Effect.Smooth || e == Effect.Audio || e == Effect.Ambient;
+            return e == Effect.Breath || e == Effect.Wave || e == Effect.Smooth || e == Effect.Audio || e == Effect.Ambient ||
+                   e == Effect.Drift || e == Effect.Fade || e == Effect.Strobe;
         }
 
         /// <summary>Effects whose output is built from the four zone colours.</summary>
         public static bool UsesZoneColors(Effect e)
         {
-            return e == Effect.Static || e == Effect.Breath || e == Effect.Audio;
+            return e == Effect.Static || e == Effect.Breath || e == Effect.Audio ||
+                   e == Effect.Drift || e == Effect.Fade || e == Effect.Strobe;
         }
 
         public static string Describe(Effect e)
@@ -43,6 +45,9 @@ namespace LoqRgb
                 case Effect.Audio: return "Zones react to the sound playing on this PC: bass on the left, treble on the right. Uses your zone colours.";
                 case Effect.Ambient: return "Each zone takes the average colour of the matching quarter of your screen (games, videos, wallpaper). Speed sets how quickly it follows.";
                 case Effect.Monitor: return "Live system status, green → yellow → red: zone 1 CPU load, zone 2 RAM use, zone 3 GPU load, zone 4 battery (breathes while charging).";
+                case Effect.Drift: return "Your four zone colours flow smoothly across the keyboard.";
+                case Effect.Fade: return "The whole keyboard fades through your four zone colours, one after another.";
+                case Effect.Strobe: return "Police-style double flashes: left half, then right half, in your zone colours (try red + red + blue + blue).";
                 default: return null;
             }
         }
@@ -253,8 +258,19 @@ namespace LoqRgb
         {
             try
             {
+                // Presets added in later versions are created once, so deleting them sticks.
+                string marker = Path.Combine(ProfileDir, ".presets-v2");
+                if (Directory.Exists(ProfileDir) && !File.Exists(marker))
+                {
+                    if (!File.Exists(ProfilePath("Police"))) SaveProfile("Police", Preset(Effect.Strobe, "#FF0000", "#FF0000", "#0040FF", "#0040FF"));
+                    if (!File.Exists(ProfilePath("Music"))) SaveProfile("Music", Preset(Effect.Audio, "#FF0040", "#FF8000", "#00FF80", "#0080FF"));
+                    File.WriteAllText(marker, "");
+                }
                 if (Directory.Exists(ProfileDir)) return;
                 Directory.CreateDirectory(ProfileDir);
+                File.WriteAllText(marker, "");
+                SaveProfile("Police", Preset(Effect.Strobe, "#FF0000", "#FF0000", "#0040FF", "#0040FF"));
+                SaveProfile("Music", Preset(Effect.Audio, "#FF0040", "#FF8000", "#00FF80", "#0080FF"));
                 SaveProfile("Ocean", Preset(Effect.Static, "#0050FF", "#00A0FF", "#00E0FF", "#00FFC0"));
                 SaveProfile("Sunset", Preset(Effect.Static, "#FF2000", "#FF5A00", "#FF9000", "#FF0060"));
                 SaveProfile("Cyber", Preset(Effect.Static, "#FF00C8", "#8A00FF", "#00C8FF", "#00FFA0"));
