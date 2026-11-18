@@ -87,6 +87,56 @@ namespace LoqRgb
             SystemEvents.SessionSwitch += OnSessionSwitch;
             StartShowListener();
             StartBatteryWatch();
+            StartAppRules();
+        }
+
+        // ---------------------------------------------------------------- app profiles (#6)
+
+        ForegroundWatcher foreground;
+        List<AppRule> appRules = new List<AppRule>();
+        string autoProfile, autoApp;
+        LightState autoState;
+
+        void StartAppRules()
+        {
+            appRules = AppRule.Parse(settings.GetString(Opt.AppRules, ""));
+            foreground = new ForegroundWatcher();
+            foreground.Changed += OnForegroundApp;
+            foreground.Check();
+        }
+
+        void OnForegroundApp(string app)
+        {
+            if (app.Equals(System.Diagnostics.Process.GetCurrentProcess().ProcessName, StringComparison.OrdinalIgnoreCase))
+                return; // keep whatever is showing while the user looks at this window
+            AppRule rule = settings.GetBool(Opt.AppRulesEnabled, true) && settings.State.Effect != Effect.Off
+                ? appRules.FirstOrDefault(r => r.App.Equals(app, StringComparison.OrdinalIgnoreCase))
+                : null;
+            if (rule == null) { ClearAutoProfile(); return; }
+            if (rule.Profile == autoProfile && app == autoApp) return;
+
+            LightState st = AppSettings.LoadProfile(rule.Profile);
+            if (st == null) { ClearAutoProfile(); return; }
+            autoProfile = rule.Profile;
+            autoApp = app;
+            autoState = st;
+            if (!Effects.IsSoftware(st.Effect)) view.LiveFrame = null;
+            engine.SetState(st);
+            RefreshUi();
+            RenderStatus();
+            UpdateIcons();
+        }
+
+        /// <summary>Returns to the user's own lighting if an app profile is active.</summary>
+        void ClearAutoProfile()
+        {
+            if (autoProfile == null) return;
+            autoProfile = autoApp = null;
+            autoState = null;
+            ApplyToKeyboard();
+            RefreshUi();
+            RenderStatus();
+            UpdateIcons();
         }
 
         // ---------------------------------------------------------------- UI construction
@@ -293,6 +343,9 @@ namespace LoqRgb
         void OnOptionsChanged()
         {
             UpdateShellHook();
+            appRules = AppRule.Parse(settings.GetString(Opt.AppRules, ""));
+            autoProfile = null; // force re-evaluation with the new rules
+            if (foreground != null) foreground.Check();
         }
 
         // ---------------------------------------------------------------- notifications (#5)
@@ -583,6 +636,13 @@ namespace LoqRgb
 
         void Changed()
         {
+            // A manual change wins over an active app profile until the next app switch.
+            if (autoProfile != null)
+            {
+                autoProfile = autoApp = null;
+                autoState = null;
+                RenderStatus();
+            }
             RefreshUi();
             ApplyToKeyboard();
             settings.Save();
@@ -625,7 +685,7 @@ namespace LoqRgb
             hexBox.Text = Gfx.ToHex(s.Zones[FirstSelected()]);
             hexBox.ForeColor = Theme.Text;
 
-            view.State = s;
+            view.State = autoState ?? s;
             view.Selected = selected;
             view.Invalidate();
         }
@@ -636,11 +696,32 @@ namespace LoqRgb
             engine.SetState(settings.State);
         }
 
+        bool engineOk;
+        string engineMessage;
+
         void OnEngineStatus(bool ok, string message)
         {
             if (InvokeRequired)
             {
                 if (IsHandleCreated) BeginInvoke(new Action<bool, string>(OnEngineStatus), ok, message);
+                return;
+            }
+            engineOk = ok;
+            engineMessage = message;
+            RenderStatus();
+        }
+
+        void RenderStatus()
+        {
+            bool ok = engineOk;
+            string message = engineMessage;
+            string trayText = "LOQ Keyboard RGB" + (autoProfile != null ? " · " + autoProfile : "");
+            if (tray != null) tray.Text = trayText.Length > 63 ? trayText.Substring(0, 63) : trayText;
+            if (ok && message == null && autoProfile != null)
+            {
+                statusLabel.ForeColor = Theme.Accent;
+                statusLabel.Text = "●  Auto profile: " + autoProfile + "  (" + autoApp + ")";
+                tips.SetToolTip(statusLabel, "\"" + autoApp + "\" is in front, so its app profile is active. Your own lighting returns when you switch away.");
                 return;
             }
             if (!ok)
@@ -664,7 +745,7 @@ namespace LoqRgb
         void UpdateIcons()
         {
             Icon old = currentIcon;
-            currentIcon = Gfx.MakeIcon(settings.State);
+            currentIcon = Gfx.MakeIcon(autoState ?? settings.State);
             Icon = currentIcon;
             tray.Icon = currentIcon;
             if (old != null) old.Dispose();
@@ -826,6 +907,7 @@ namespace LoqRgb
             batteryTimer.Stop();
             tray.Visible = false;
             tray.Dispose();
+            if (foreground != null) foreground.Dispose();
             engine.Dispose();
             base.OnFormClosed(e);
         }

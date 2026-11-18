@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 
@@ -10,6 +11,9 @@ namespace LoqRgb
         public const string FlashOnAttention = "flashOnAttention";
         public const string FlashColor = "flashColor";
         public const string LowBatteryFlash = "lowBatteryFlash";
+
+        public const string AppRulesEnabled = "appRulesEnabled";
+        public const string AppRules = "appRules";
 
         public static readonly Color DefaultFlashColor = Color.FromArgb(255, 176, 0);
     }
@@ -57,6 +61,52 @@ namespace LoqRgb
             CancelButton = close;
 
             BuildNotifications();
+            BuildAppRules();
+        }
+
+        ComboBox Combo(int x, int top, int w, bool editable)
+        {
+            var c = new ComboBox
+            {
+                Left = x, Top = top, Width = w, FlatStyle = FlatStyle.Flat, BackColor = Theme.Panel, ForeColor = Theme.Text,
+                DropDownStyle = editable ? ComboBoxStyle.DropDown : ComboBoxStyle.DropDownList
+            };
+            if (!editable)
+            {
+                c.DrawMode = DrawMode.OwnerDrawFixed;
+                c.DrawItem += (s, e) =>
+                {
+                    bool hot = (e.State & DrawItemState.ComboBoxEdit) == 0 && (e.State & DrawItemState.Selected) != 0;
+                    using (var b = new SolidBrush(hot ? Theme.Accent : Theme.Panel)) e.Graphics.FillRectangle(b, e.Bounds);
+                    if (e.Index < 0) return;
+                    var r = new Rectangle(e.Bounds.X + 4, e.Bounds.Y, e.Bounds.Width - 4, e.Bounds.Height);
+                    TextRenderer.DrawText(e.Graphics, c.Items[e.Index].ToString(), c.Font, r, hot ? Color.White : Theme.Text,
+                        TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+                };
+            }
+            body.Controls.Add(c);
+            return c;
+        }
+
+        ListBox DarkList(int height)
+        {
+            var l = new ListBox
+            {
+                Left = Left0, Top = y, Width = Width0, Height = height, BackColor = Theme.Panel, ForeColor = Theme.Text,
+                BorderStyle = BorderStyle.FixedSingle, DrawMode = DrawMode.OwnerDrawFixed, ItemHeight = 24, IntegralHeight = false
+            };
+            l.DrawItem += (s, e) =>
+            {
+                if (e.Index < 0) return;
+                bool sel = (e.State & DrawItemState.Selected) != 0;
+                using (var b = new SolidBrush(sel ? Theme.Accent : Theme.Panel)) e.Graphics.FillRectangle(b, e.Bounds);
+                var r = new Rectangle(e.Bounds.X + 8, e.Bounds.Y, e.Bounds.Width - 8, e.Bounds.Height);
+                TextRenderer.DrawText(e.Graphics, l.Items[e.Index].ToString(), l.Font, r, sel ? Color.White : Theme.Text,
+                    TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+            };
+            body.Controls.Add(l);
+            y += height + 8;
+            return l;
         }
 
         protected override void OnHandleCreated(EventArgs e)
@@ -162,6 +212,57 @@ namespace LoqRgb
             y += 38;
             Toggle("Flash on low battery (orange at 20%, red at 10%)", Opt.LowBatteryFlash, true, null);
             Note("From scripts or build tools:  LOQKeyboardRGB.exe --flash 00FF00 [--times 3]");
+        }
+
+        void BuildAppRules()
+        {
+            Section("App profiles", "Use a profile automatically while a specific app is in front. Your normal lighting comes back when you switch away.");
+            Toggle("Enable app profiles", Opt.AppRulesEnabled, true, null);
+
+            List<AppRule> rules = AppRule.Parse(settings.GetString(Opt.AppRules, ""));
+            ListBox list = DarkList(110);
+            Action reload = () =>
+            {
+                list.Items.Clear();
+                foreach (AppRule r in rules) list.Items.Add(r);
+            };
+            Action save = () =>
+            {
+                settings.SetString(Opt.AppRules, AppRule.Serialize(rules));
+                Commit();
+                reload();
+            };
+            reload();
+
+            ComboBox app = Combo(Left0, y + 2, 150, true);
+            app.Items.AddRange(AppRule.RunningApps());
+            tips.SetToolTip(app, "The app's .exe name. Pick a running app or type one, e.g. valorant");
+            body.Controls.Add(new Label { Text = "→", Left = Left0 + 154, Top = y + 5, AutoSize = true, ForeColor = Theme.Muted });
+            ComboBox profile = Combo(Left0 + 172, y + 2, 140, false);
+            profile.Items.AddRange(AppSettings.ListProfiles());
+            if (profile.Items.Count > 0) profile.SelectedIndex = 0;
+
+            Button add = Small("Add", Left0 + 318, y, 72);
+            add.Click += delegate
+            {
+                string name = AppRule.Normalize(app.Text);
+                var prof = profile.SelectedItem as string;
+                if (name.Length == 0 || name.IndexOfAny(new[] { '|', '>' }) >= 0 || prof == null) return;
+                rules.RemoveAll(r => r.App.Equals(name, StringComparison.OrdinalIgnoreCase));
+                rules.Add(new AppRule { App = name, Profile = prof });
+                save();
+                app.Text = "";
+            };
+            Button remove = Small("Remove", Left0 + 394, y, 76);
+            remove.Click += delegate
+            {
+                var r = list.SelectedItem as AppRule;
+                if (r == null) return;
+                rules.Remove(r);
+                save();
+            };
+            y += 38;
+            Note("Rules don't apply while the lights are turned off. Changing the lighting yourself overrides the rule until you switch apps.");
         }
     }
 }
