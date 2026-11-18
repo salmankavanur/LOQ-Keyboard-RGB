@@ -43,13 +43,17 @@ namespace LoqRgb
         [STAThread]
         static int Main(string[] args)
         {
-            bool tray = false, off = false, on = false, toggle = false;
+            bool tray = false, off = false, on = false, toggle = false, install = false, uninstall = false, quiet = false;
             string profile = null, color = null, flash = null;
-            int times = 3;
+            int times = 3, waitPid = 0;
             for (int i = 0; i < args.Length; i++)
             {
                 string a = args[i].ToLowerInvariant();
-                if (a == "--tray") tray = true;
+                if (a == "--install") install = true;
+                else if (a == "--uninstall") uninstall = true;
+                else if (a == "--quiet") quiet = true;
+                else if (a == "--wait-pid" && i + 1 < args.Length && int.TryParse(args[i + 1], out waitPid)) i++;
+                else if (a == "--tray") tray = true;
                 else if (a == "--off") off = true;
                 else if (a == "--on") on = true;
                 else if (a == "--toggle") toggle = true;
@@ -57,6 +61,27 @@ namespace LoqRgb
                 else if (a == "--color" && i + 1 < args.Length) color = args[++i];
                 else if (a == "--flash" && i + 1 < args.Length) flash = args[++i];
                 else if (a == "--times" && i + 1 < args.Length && int.TryParse(args[i + 1], out times)) i++;
+            }
+
+            if (waitPid != 0)
+            {
+                // started by the installer: let the old copy exit and release the single-instance mutex
+                try { System.Diagnostics.Process.GetProcessById(waitPid).WaitForExit(10000); } catch { }
+            }
+
+            if (uninstall || install)
+            {
+                Application.EnableVisualStyles();
+                IntPtr other = FindRunningWindow();
+                if (other != IntPtr.Zero)
+                {
+                    SendCommand(other, "exit"); // close the running copy so its files can be replaced/removed
+                    Thread.Sleep(1500);
+                }
+                if (uninstall) return Installer.Uninstall(quiet);
+                string exe = Installer.Install();
+                if (!quiet) System.Diagnostics.Process.Start(exe);
+                return 0;
             }
 
             if (off || on || toggle || profile != null || color != null || flash != null)

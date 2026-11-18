@@ -595,6 +595,10 @@ namespace LoqRgb
                 case "toggle":
                     ToggleLights();
                     break;
+                case "exit": // sent by the installer / uninstaller
+                    reallyExit = true;
+                    BeginInvoke(new Action(Close));
+                    break;
                 case "off":
                     if (settings.State.Effect != Effect.Off) SetEffect(Effect.Off);
                     break;

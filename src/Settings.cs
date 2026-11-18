@@ -73,6 +73,38 @@ namespace LoqRgb
             BuildLenovoMode();
             BuildAppRules();
             BuildHotkeys();
+            BuildInstall();
+        }
+
+        void BuildInstall()
+        {
+            Section("Installation", null);
+            if (Installer.RunningFromInstall)
+            {
+                Note("Installed for this user in " + Installer.InstallDir + ". Remove it from Windows Settings → Apps, or here:");
+                Button un = Small("Uninstall…", Left0 + 22, y, 120);
+                un.Click += delegate
+                {
+                    System.Diagnostics.Process.Start(Installer.InstalledExe, "--uninstall");
+                };
+                y += 40;
+            }
+            else
+            {
+                Note("Running from " + System.IO.Path.GetDirectoryName(Application.ExecutablePath) +
+                     ". Install it to get a Start menu entry and an uninstaller (no admin rights needed)." +
+                     (Installer.IsInstalled ? " An installed copy exists; installing again updates it." : ""));
+                Button inst = Small(Installer.IsInstalled ? "Update installed copy" : "Install for this user", Left0 + 22, y, 180);
+                inst.Click += delegate
+                {
+                    try { Installer.InstallAndRelaunch(); }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(this, "Installation failed:\n" + ex.Message, "LOQ Keyboard RGB", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    }
+                };
+                y += 40;
+            }
         }
 
         void Choice(string label, string key, int fallback, string[] items, int[] values)
