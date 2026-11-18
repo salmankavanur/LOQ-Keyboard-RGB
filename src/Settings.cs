@@ -62,6 +62,37 @@ namespace LoqRgb
 
             BuildNotifications();
             BuildAppRules();
+            BuildHotkeys();
+        }
+
+        void BuildHotkeys()
+        {
+            Section("Hotkeys", "Work everywhere, even in games. Click a box and press a new combination; Backspace clears it, Esc cancels.");
+            var conflictLabels = new List<KeyValuePair<HotkeyAction, Label>>();
+            Action showConflicts = () =>
+            {
+                foreach (var kv in conflictLabels) kv.Value.Visible = Hotkeys.Conflicts.Contains(kv.Key);
+            };
+            Toggle("Enable hotkeys", Hotkeys.EnabledKey, true, showConflicts);
+            foreach (HotkeyAction a in Hotkeys.All)
+            {
+                HotkeyAction action = a;
+                body.Controls.Add(new Label { Text = Hotkeys.Label(a), Left = Left0 + 22, Top = y + 4, AutoSize = true, ForeColor = Theme.Text });
+                var box = new HotkeyBox { Left = Left0 + 190, Top = y, Width = 170, Value = Hotkeys.Get(settings, a) };
+                body.Controls.Add(box);
+                var conflict = new Label { Text = "⚠ in use", Left = Left0 + 370, Top = y + 4, AutoSize = true, ForeColor = Theme.Warn, Visible = false };
+                tips.SetToolTip(conflict, "Another program already uses this combination. Pick a different one.");
+                body.Controls.Add(conflict);
+                conflictLabels.Add(new KeyValuePair<HotkeyAction, Label>(a, conflict));
+                box.ValueChanged += k =>
+                {
+                    Hotkeys.Set(settings, action, k);
+                    Commit();
+                    showConflicts();
+                };
+                y += 32;
+            }
+            showConflicts();
         }
 
         ComboBox Combo(int x, int top, int w, bool editable)

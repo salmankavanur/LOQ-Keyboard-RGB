@@ -343,6 +343,7 @@ namespace LoqRgb
         void OnOptionsChanged()
         {
             UpdateShellHook();
+            if (IsHandleCreated) Hotkeys.RegisterAll(Handle, settings);
             appRules = AppRule.Parse(settings.GetString(Opt.AppRules, ""));
             autoProfile = null; // force re-evaluation with the new rules
             if (foreground != null) foreground.Check();
@@ -452,6 +453,12 @@ namespace LoqRgb
 
         protected override void WndProc(ref Message m)
         {
+            if (m.Msg == Hotkeys.WM_HOTKEY)
+            {
+                int id = m.WParam.ToInt32();
+                if (Enum.IsDefined(typeof(HotkeyAction), id)) OnHotkey((HotkeyAction)id);
+                return;
+            }
             if (m.Msg == WM_COPYDATA)
             {
                 try
@@ -767,6 +774,7 @@ namespace LoqRgb
             LightState st = AppSettings.LoadProfile(name);
             if (st == null) return;
             settings.State = st;
+            lastProfile = name;
             Changed();
         }
 
@@ -879,6 +887,39 @@ namespace LoqRgb
             catch { }
             shellHooked = false;
             UpdateShellHook();
+            Hotkeys.RegisterAll(Handle, settings);
+        }
+
+        // ---------------------------------------------------------------- hotkeys (#7)
+
+        string lastProfile;
+
+        void OnHotkey(HotkeyAction action)
+        {
+            switch (action)
+            {
+                case HotkeyAction.Toggle: ToggleLights(); break;
+                case HotkeyAction.NextProfile: CycleProfile(1); break;
+                case HotkeyAction.PreviousProfile: CycleProfile(-1); break;
+                case HotkeyAction.BrightnessUp: SetBrightness(2); break;
+                case HotkeyAction.BrightnessDown: SetBrightness(1); break;
+                case HotkeyAction.NextEffect:
+                    Effect[] cycle = AllEffects.Where(e => e != Effect.Off).ToArray();
+                    int i = Array.IndexOf(cycle, settings.State.Effect);
+                    SetEffect(cycle[(i + 1) % cycle.Length]);
+                    break;
+            }
+        }
+
+        void CycleProfile(int step)
+        {
+            string[] names = AppSettings.ListProfiles();
+            if (names.Length == 0) return;
+            string current = profileBox.SelectedItem as string ?? lastProfile;
+            int i = current == null ? -1 : Array.FindIndex(names, n => n.Equals(current, StringComparison.OrdinalIgnoreCase));
+            i = i < 0 ? (step > 0 ? 0 : names.Length - 1) : (i + step + names.Length) % names.Length;
+            RefreshProfiles(names[i]);
+            LoadProfile(names[i]);
         }
 
         protected override void OnFormClosing(FormClosingEventArgs e)
@@ -904,6 +945,7 @@ namespace LoqRgb
             SystemEvents.PowerModeChanged -= OnPowerModeChanged;
             SystemEvents.SessionSwitch -= OnSessionSwitch;
             if (shellHooked) DeregisterShellHookWindow(Handle);
+            Hotkeys.UnregisterAll(Handle);
             batteryTimer.Stop();
             tray.Visible = false;
             tray.Dispose();
