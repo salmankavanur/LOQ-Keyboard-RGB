@@ -219,7 +219,38 @@ namespace LoqRgb
                 logo.Image = new Icon(icon, 48, 48).ToBitmap();
                 f.Controls.Add(logo);
                 f.Controls.Add(new Label { Text = "LOQ Keyboard RGB", Left = 82, Top = 20, AutoSize = true, Font = new Font("Segoe UI Semibold", 15F) });
-                f.Controls.Add(new Label { Text = "Version " + Version, Left = 85, Top = 52, AutoSize = true, ForeColor = Theme.Muted });
+                var versionLabel = new Label { Text = "Version " + Version, Left = 85, Top = 52, AutoSize = true, ForeColor = Theme.Muted };
+                f.Controls.Add(versionLabel);
+                string repo = Updates.RepositoryUrl;
+                if (repo != null)
+                {
+                    var update = new LinkLabel
+                    {
+                        Text = "Check for updates", Left = 170, Top = 52, AutoSize = true,
+                        LinkColor = Theme.Accent, ActiveLinkColor = Color.White, VisitedLinkColor = Theme.Accent,
+                        LinkBehavior = LinkBehavior.HoverUnderline
+                    };
+                    string releaseUrl = null;
+                    update.LinkClicked += delegate
+                    {
+                        if (releaseUrl != null)
+                        {
+                            System.Diagnostics.Process.Start(releaseUrl);
+                            return;
+                        }
+                        update.Text = "Checking…";
+                        update.Enabled = false;
+                        Updates.CheckAsync(repo, r => update.BeginInvoke(new Action(() =>
+                        {
+                            update.Enabled = true;
+                            if (r.Error != null) { update.Text = r.Error + " Retry"; return; }
+                            if (!r.Newer) { update.Text = "Up to date ✓"; return; }
+                            releaseUrl = r.PageUrl ?? repo + "/releases/latest";
+                            update.Text = "Version " + r.Version + " available: download";
+                        })));
+                    };
+                    f.Controls.Add(update);
+                }
 
                 f.Controls.Add(new Label
                 {

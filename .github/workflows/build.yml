@@ -1,0 +1,48 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+
+permissions:
+  contents: write   # needed to publish releases on tags
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Stamp version and repository
+        shell: pwsh
+        run: |
+          $version = '1.0.0'
+          if ($env:GITHUB_REF -like 'refs/tags/v*') { $version = $env:GITHUB_REF_NAME.TrimStart('v').Split('-')[0] }
+          $parts = $version.Split('.')
+          while ($parts.Count -lt 4) { $parts += '0' }
+          $v4 = ($parts[0..3]) -join '.'
+          $f = 'src/AssemblyInfo.cs'
+          (Get-Content $f) -replace '"1\.0\.0\.0"', "`"$v4`"" | Set-Content $f
+          Add-Content $f "[assembly: AssemblyMetadata(`"RepositoryUrl`", `"https://github.com/$env:GITHUB_REPOSITORY`")]"
+          Write-Host "Version $v4, repository $env:GITHUB_REPOSITORY"
+
+      - name: Build
+        shell: cmd
+        run: build.cmd
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LOQKeyboardRGB
+          path: bin/LOQKeyboardRGB.exe
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          gh release create $env:GITHUB_REF_NAME bin/LOQKeyboardRGB.exe
+          --title "LOQ Keyboard RGB $env:GITHUB_REF_NAME"
+          --generate-notes
