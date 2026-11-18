@@ -349,10 +349,16 @@ namespace LoqRgb
                 b.Click += delegate { SetEffect(fx); };
                 effectButtons[fx] = b;
             }
+            // second row: widths follow the labels, leftover space shared evenly across the 394 px row
+            const int rowWidth = 394, gap = 6;
+            int[] widths = SoftwareOrder.Select(e => TextRenderer.MeasureText(e.ToString(), Font).Width + 18).ToArray();
+            int extra = Math.Max(0, (rowWidth - widths.Sum() - gap * (widths.Length - 1)) / widths.Length);
+            int x = 16;
             for (int i = 0; i < SoftwareOrder.Length; i++)
             {
                 Effect fx = SoftwareOrder[i];
-                Button b = Chip(fx.ToString(), 16 + i * 66, 390, 62, 34);
+                Button b = Chip(fx.ToString(), x, 390, widths[i] + extra, 34);
+                x += widths[i] + extra + gap;
                 b.Click += delegate { SetEffect(fx); };
                 tips.SetToolTip(b, Effects.Describe(fx));
                 effectButtons[fx] = b;
