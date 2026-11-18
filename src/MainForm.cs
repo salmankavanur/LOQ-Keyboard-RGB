@@ -88,6 +88,115 @@ namespace LoqRgb
             StartShowListener();
             StartBatteryWatch();
             StartAppRules();
+            StartPowerRules();
+        }
+
+        // ---------------------------------------------------------------- power & schedule rules (#8)
+
+        [StructLayout(LayoutKind.Sequential)]
+        struct LASTINPUTINFO { public int cbSize; public uint dwTime; }
+
+        [StructLayout(LayoutKind.Sequential)]
+        struct POWERBROADCAST_SETTING { public Guid PowerSetting; public int DataLength; public int Data; }
+
+        [DllImport("user32.dll")] static extern bool GetLastInputInfo(ref LASTINPUTINFO info);
+        [DllImport("user32.dll")] static extern IntPtr RegisterPowerSettingNotification(IntPtr recipient, ref Guid setting, int flags);
+        [DllImport("user32.dll")] static extern bool UnregisterPowerSettingNotification(IntPtr handle);
+
+        static Guid ConsoleDisplayState = new Guid("6FE69556-704A-47A0-8F24-C28D936FDA47");
+        const int WM_POWERBROADCAST = 0x0218, PBT_POWERSETTINGCHANGE = 0x8013;
+
+        readonly System.Windows.Forms.Timer policyTimer = new System.Windows.Forms.Timer();
+        IntPtr displayNotify;
+        bool idleOff, screenOff, onBattery, nightSuspended;
+        LightState nightState;
+        string nightName;
+
+        void StartPowerRules()
+        {
+            policyTimer.Interval = 1000;
+            policyTimer.Tick += delegate { EvaluatePolicy(); };
+            policyTimer.Start();
+            EvaluatePolicy();
+        }
+
+        static TimeSpan IdleTime()
+        {
+            var info = new LASTINPUTINFO { cbSize = Marshal.SizeOf(typeof(LASTINPUTINFO)) };
+            if (!GetLastInputInfo(ref info)) return TimeSpan.Zero;
+            return TimeSpan.FromMilliseconds(unchecked((uint)Environment.TickCount - info.dwTime));
+        }
+
+        static bool InWindow(string from, string to, DateTime now)
+        {
+            TimeSpan a, b;
+            if (!TimeSpan.TryParse(from, out a) || !TimeSpan.TryParse(to, out b) || a == b) return false;
+            TimeSpan t = now.TimeOfDay;
+            return a < b ? t >= a && t < b : t >= a || t < b; // window may cross midnight
+        }
+
+        /// <summary>Re-evaluates idle, battery and night rules; re-applies the lighting when anything changed.</summary>
+        void EvaluatePolicy()
+        {
+            int idleMinutes = settings.GetInt(Opt.IdleMinutes, 0);
+            bool newIdle = idleMinutes > 0 && IdleTime().TotalMinutes >= idleMinutes;
+
+            PowerStatus p = SystemInformation.PowerStatus;
+            bool newBattery = p.PowerLineStatus == PowerLineStatus.Offline &&
+                              (p.BatteryChargeStatus & BatteryChargeStatus.NoSystemBattery) == 0;
+
+            bool nightOn = settings.GetBool(Opt.NightEnabled, false) &&
+                           InWindow(settings.GetString(Opt.NightFrom, "22:00"), settings.GetString(Opt.NightTo, "07:00"), DateTime.Now);
+            if (!nightOn) nightSuspended = false; // re-arm for the next night
+            string newNightName = nightOn && !nightSuspended ? settings.GetString(Opt.NightProfile, null) : null;
+
+            bool screen = screenOff && settings.GetBool(Opt.OffWithScreen, true);
+            if (newIdle == idleOff && newBattery == onBattery && newNightName == nightName && screen == screenOff) return;
+
+            idleOff = newIdle;
+            onBattery = newBattery;
+            screenOff = screen;
+            if (newNightName != nightName)
+            {
+                nightName = newNightName;
+                nightState = nightName != null ? AppSettings.LoadProfile(nightName) : null;
+                if (nightState == null) nightName = null;
+            }
+            ApplyToKeyboard();
+            RefreshUi();
+            RenderStatus();
+            UpdateIcons();
+        }
+
+        string PowerRuleText()
+        {
+            if (settings.State.Effect == Effect.Off) return null;
+            if (screenOff) return "Lights off while the screen is off";
+            if (idleOff) return "Lights off: no input for " + settings.GetInt(Opt.IdleMinutes, 0) + " min";
+            if (onBattery)
+            {
+                int mode = settings.GetInt(Opt.BatteryMode, 0);
+                if (mode == 2) return "On battery: lights off";
+                if (mode == 1) return "On battery: low brightness";
+            }
+            if (autoState == null && nightState != null) return "Night profile: " + nightName;
+            return null;
+        }
+
+        void RegisterDisplayNotification()
+        {
+            if (displayNotify == IntPtr.Zero)
+                displayNotify = RegisterPowerSettingNotification(Handle, ref ConsoleDisplayState, 0 /* window handle */);
+        }
+
+        void OnDisplayState(int state)
+        {
+            // 0 = off, 1 = on, 2 = dimmed
+            bool off = state == 0 && settings.GetBool(Opt.OffWithScreen, true);
+            if (off == screenOff) return;
+            screenOff = off;
+            ApplyToKeyboard();
+            RenderStatus();
         }
 
         // ---------------------------------------------------------------- app profiles (#6)
@@ -120,8 +229,7 @@ namespace LoqRgb
             autoProfile = rule.Profile;
             autoApp = app;
             autoState = st;
-            if (!Effects.IsSoftware(st.Effect)) view.LiveFrame = null;
-            engine.SetState(st);
+            ApplyToKeyboard();
             RefreshUi();
             RenderStatus();
             UpdateIcons();
@@ -344,6 +452,13 @@ namespace LoqRgb
         {
             UpdateShellHook();
             if (IsHandleCreated) Hotkeys.RegisterAll(Handle, settings);
+            nightName = null; // reload the night profile in case it changed
+            nightState = null;
+            if (policyTimer.Enabled) EvaluatePolicy();
+            ApplyToKeyboard(); // always re-apply: a rule may have just been switched off
+            RefreshUi();
+            RenderStatus();
+            UpdateIcons();
             appRules = AppRule.Parse(settings.GetString(Opt.AppRules, ""));
             autoProfile = null; // force re-evaluation with the new rules
             if (foreground != null) foreground.Check();
@@ -453,6 +568,11 @@ namespace LoqRgb
 
         protected override void WndProc(ref Message m)
         {
+            if (m.Msg == WM_POWERBROADCAST && m.WParam.ToInt32() == PBT_POWERSETTINGCHANGE)
+            {
+                var ps = (POWERBROADCAST_SETTING)Marshal.PtrToStructure(m.LParam, typeof(POWERBROADCAST_SETTING));
+                if (ps.PowerSetting == ConsoleDisplayState) OnDisplayState(ps.Data);
+            }
             if (m.Msg == Hotkeys.WM_HOTKEY)
             {
                 int id = m.WParam.ToInt32();
@@ -650,6 +770,14 @@ namespace LoqRgb
                 autoState = null;
                 RenderStatus();
             }
+            // ...and pauses the night profile until the next night.
+            if (nightState != null)
+            {
+                nightSuspended = true;
+                nightState = null;
+                nightName = null;
+                RenderStatus();
+            }
             RefreshUi();
             ApplyToKeyboard();
             settings.Save();
@@ -692,15 +820,40 @@ namespace LoqRgb
             hexBox.Text = Gfx.ToHex(s.Zones[FirstSelected()]);
             hexBox.ForeColor = Theme.Text;
 
-            view.State = autoState ?? s;
+            view.State = EffectiveState();
             view.Selected = selected;
             view.Invalidate();
         }
 
         void ApplyToKeyboard()
         {
-            if (!Effects.IsSoftware(settings.State.Effect)) view.LiveFrame = null;
-            engine.SetState(settings.State);
+            LightState s = EffectiveState();
+            if (!Effects.IsSoftware(s.Effect)) view.LiveFrame = null;
+            engine.SetState(s);
+        }
+
+        /// <summary>
+        /// What the keyboard should show right now, after all automatic rules:
+        /// lights turned off by the user > idle / screen off > battery mode > app profile > night profile > user's lighting.
+        /// </summary>
+        LightState EffectiveState()
+        {
+            LightState s = settings.State;
+            if (s.Effect == Effect.Off) return s;
+            if (autoState != null) s = autoState;
+            else if (nightState != null) s = nightState;
+            if (idleOff || screenOff) return new LightState { Effect = Effect.Off };
+            if (onBattery)
+            {
+                int mode = settings.GetInt(Opt.BatteryMode, 0);
+                if (mode == 2) return new LightState { Effect = Effect.Off };
+                if (mode == 1 && s.Brightness != 1)
+                {
+                    s = s.Clone();
+                    s.Brightness = 1;
+                }
+            }
+            return s;
         }
 
         bool engineOk;
@@ -724,6 +877,14 @@ namespace LoqRgb
             string message = engineMessage;
             string trayText = "LOQ Keyboard RGB" + (autoProfile != null ? " · " + autoProfile : "");
             if (tray != null) tray.Text = trayText.Length > 63 ? trayText.Substring(0, 63) : trayText;
+            string rule = PowerRuleText();
+            if (ok && message == null && rule != null)
+            {
+                statusLabel.ForeColor = Theme.Accent;
+                statusLabel.Text = "●  " + rule;
+                tips.SetToolTip(statusLabel, "An automatic rule from Settings is active. Your own lighting returns when it ends.");
+                return;
+            }
             if (ok && message == null && autoProfile != null)
             {
                 statusLabel.ForeColor = Theme.Accent;
@@ -752,7 +913,7 @@ namespace LoqRgb
         void UpdateIcons()
         {
             Icon old = currentIcon;
-            currentIcon = Gfx.MakeIcon(autoState ?? settings.State);
+            currentIcon = Gfx.MakeIcon(EffectiveState());
             Icon = currentIcon;
             tray.Icon = currentIcon;
             if (old != null) old.Dispose();
@@ -888,6 +1049,8 @@ namespace LoqRgb
             shellHooked = false;
             UpdateShellHook();
             Hotkeys.RegisterAll(Handle, settings);
+            displayNotify = IntPtr.Zero;
+            RegisterDisplayNotification();
         }
 
         // ---------------------------------------------------------------- hotkeys (#7)
@@ -946,6 +1109,8 @@ namespace LoqRgb
             SystemEvents.SessionSwitch -= OnSessionSwitch;
             if (shellHooked) DeregisterShellHookWindow(Handle);
             Hotkeys.UnregisterAll(Handle);
+            policyTimer.Stop();
+            if (displayNotify != IntPtr.Zero) UnregisterPowerSettingNotification(displayNotify);
             batteryTimer.Stop();
             tray.Visible = false;
             tray.Dispose();

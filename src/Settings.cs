@@ -12,6 +12,14 @@ namespace LoqRgb
         public const string FlashColor = "flashColor";
         public const string LowBatteryFlash = "lowBatteryFlash";
 
+        public const string BatteryMode = "batteryMode";      // 0 keep, 1 low brightness, 2 off
+        public const string OffWithScreen = "offWithScreen";
+        public const string IdleMinutes = "idleMinutes";      // 0 = never
+        public const string NightEnabled = "nightEnabled";
+        public const string NightProfile = "nightProfile";
+        public const string NightFrom = "nightFrom";
+        public const string NightTo = "nightTo";
+
         public const string AppRulesEnabled = "appRulesEnabled";
         public const string AppRules = "appRules";
 
@@ -61,8 +69,62 @@ namespace LoqRgb
             CancelButton = close;
 
             BuildNotifications();
+            BuildPower();
             BuildAppRules();
             BuildHotkeys();
+        }
+
+        void Choice(string label, string key, int fallback, string[] items, int[] values)
+        {
+            body.Controls.Add(new Label { Text = label, Left = Left0, Top = y + 4, AutoSize = true, ForeColor = Theme.Text });
+            ComboBox c = Combo(Left0 + 190, y, 180, false);
+            c.Items.AddRange(items);
+            int current = settings.GetInt(key, fallback);
+            c.SelectedIndex = Math.Max(0, Array.IndexOf(values, current));
+            c.SelectedIndexChanged += delegate
+            {
+                settings.SetInt(key, values[c.SelectedIndex]);
+                Commit();
+            };
+            y += 34;
+        }
+
+        void BuildPower()
+        {
+            Section("Power & schedule", null);
+            Choice("On battery", Opt.BatteryMode, 0, new[] { "Keep my lighting", "Low brightness", "Turn lights off" }, new[] { 0, 1, 2 });
+            Choice("Turn off when idle for", Opt.IdleMinutes, 0,
+                new[] { "Never", "1 minute", "2 minutes", "5 minutes", "10 minutes", "15 minutes", "30 minutes" },
+                new[] { 0, 1, 2, 5, 10, 15, 30 });
+            Toggle("Turn lights off while the screen is off", Opt.OffWithScreen, true, null);
+
+            y += 4;
+            Toggle("Night profile", Opt.NightEnabled, false, null);
+            string[] times = new string[48];
+            for (int i = 0; i < 48; i++) times[i] = string.Format("{0:00}:{1:00}", i / 2, (i % 2) * 30);
+            ComboBox profile = Combo(Left0 + 22, y, 160, false);
+            profile.Items.AddRange(AppSettings.ListProfiles());
+            profile.SelectedItem = settings.GetString(Opt.NightProfile, null);
+            if (profile.SelectedIndex < 0 && profile.Items.Count > 0)
+            {
+                profile.SelectedIndex = 0;
+                settings.SetString(Opt.NightProfile, (string)profile.SelectedItem);
+            }
+            profile.SelectedIndexChanged += delegate { settings.SetString(Opt.NightProfile, profile.SelectedItem as string); Commit(); };
+
+            body.Controls.Add(new Label { Text = "from", Left = Left0 + 190, Top = y + 4, AutoSize = true, ForeColor = Theme.Muted });
+            ComboBox from = Combo(Left0 + 226, y, 80, false);
+            from.Items.AddRange(times);
+            from.SelectedItem = settings.GetString(Opt.NightFrom, "22:00");
+            from.SelectedIndexChanged += delegate { settings.SetString(Opt.NightFrom, from.SelectedItem as string); Commit(); };
+
+            body.Controls.Add(new Label { Text = "to", Left = Left0 + 314, Top = y + 4, AutoSize = true, ForeColor = Theme.Muted });
+            ComboBox to = Combo(Left0 + 336, y, 80, false);
+            to.Items.AddRange(times);
+            to.SelectedItem = settings.GetString(Opt.NightTo, "07:00");
+            to.SelectedIndexChanged += delegate { settings.SetString(Opt.NightTo, to.SelectedItem as string); Commit(); };
+            y += 38;
+            Note("Changing the lighting yourself during the night pauses the night profile until the next night.");
         }
 
         void BuildHotkeys()
