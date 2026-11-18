@@ -12,7 +12,7 @@ set "OUT=%~1"
 if "%OUT%"=="" set "OUT=bin\LOQKeyboardRGB.exe"
 if not exist bin mkdir bin
 "%CSC%" /nologo /target:winexe /optimize+ /platform:anycpu "/out:%OUT%" ^
-  /r:System.dll /r:System.Core.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll ^
+  /r:System.dll /r:System.Core.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll /r:System.Management.dll ^
   /resource:assets\avatar.png,LoqRgb.avatar.png ^
   src\*.cs
 if errorlevel 1 exit /b 1

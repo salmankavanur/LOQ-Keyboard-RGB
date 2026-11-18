@@ -51,16 +51,16 @@ namespace LoqRgb
             MinimizeBox = MaximizeBox = false;
             ShowInTaskbar = false;
             StartPosition = FormStartPosition.CenterParent;
-            ClientSize = new Size(520, 560);
+            ClientSize = new Size(520, 660);
             BackColor = Theme.Bg;
             ForeColor = Theme.Text;
 
-            body = new Panel { Left = 0, Top = 0, Width = 520, Height = 500, AutoScroll = true, BackColor = Theme.Bg };
+            body = new Panel { Left = 0, Top = 0, Width = 520, Height = 600, AutoScroll = true, BackColor = Theme.Bg };
             Controls.Add(body);
-            Controls.Add(new Panel { Left = 0, Top = 500, Width = 520, Height = 1, BackColor = Theme.Border });
+            Controls.Add(new Panel { Left = 0, Top = 600, Width = 520, Height = 1, BackColor = Theme.Border });
             var close = new Button
             {
-                Text = "Done", DialogResult = DialogResult.OK, Left = 416, Top = 514, Width = 86, Height = 32,
+                Text = "Done", DialogResult = DialogResult.OK, Left = 416, Top = 614, Width = 86, Height = 32,
                 FlatStyle = FlatStyle.Flat, BackColor = Theme.Accent, ForeColor = Color.White, Cursor = Cursors.Hand
             };
             close.FlatAppearance.BorderColor = Theme.Accent;
@@ -70,6 +70,7 @@ namespace LoqRgb
 
             BuildNotifications();
             BuildPower();
+            BuildLenovoMode();
             BuildAppRules();
             BuildHotkeys();
         }
@@ -87,6 +88,37 @@ namespace LoqRgb
                 Commit();
             };
             y += 34;
+        }
+
+        void BuildLenovoMode()
+        {
+            PowerModeWatcher w = PowerModeWatcher.Shared;
+            Section("Lenovo power mode (Fn+Q)", "Switch lighting with the power mode: e.g. blue for Quiet, white for Balanced, red for Performance.");
+            if (w == null || !w.Available)
+            {
+                Note("Not available: this laptop doesn't report Lenovo power-mode changes.");
+                return;
+            }
+            Toggle("Change lighting with the power mode", PowerModeWatcher.EnabledKey, false, null);
+            string[] profiles = AppSettings.ListProfiles();
+            foreach (LenovoPowerMode m in new[] { LenovoPowerMode.Quiet, LenovoPowerMode.Balanced, LenovoPowerMode.Performance })
+            {
+                string key = PowerModeWatcher.SettingKey(m);
+                string label = m + (w.Current == m ? "   (now)" : "");
+                body.Controls.Add(new Label { Text = label, Left = Left0 + 22, Top = y + 4, AutoSize = true, ForeColor = w.Current == m ? Theme.Accent : Theme.Text });
+                ComboBox c = Combo(Left0 + 190, y, 180, false);
+                c.Items.Add("(no change)");
+                c.Items.AddRange(profiles);
+                string current = settings.GetString(key, null);
+                c.SelectedIndex = current == null ? 0 : Math.Max(0, c.Items.IndexOf(current));
+                c.SelectedIndexChanged += delegate
+                {
+                    settings.SetString(key, c.SelectedIndex <= 0 ? null : (string)c.SelectedItem);
+                    Commit();
+                };
+                y += 34;
+            }
+            Note("Changing the lighting yourself overrides the mode's profile until you press Fn+Q again.");
         }
 
         void BuildPower()
@@ -213,15 +245,25 @@ namespace LoqRgb
         void Section(string title, string subtitle)
         {
             if (y > 12) y += 10;
-            body.Controls.Add(new Label { Text = title.ToUpperInvariant(), Left = Left0, Top = y, AutoSize = true, ForeColor = Theme.Muted, Font = new Font("Segoe UI", 8F, FontStyle.Bold) });
-            y += 20;
-            if (subtitle != null)
+            body.Controls.Add(new Label
             {
-                var l = new Label { Text = subtitle, Left = Left0, Top = y, Width = Width0, ForeColor = Theme.Muted };
-                l.Height = TextRenderer.MeasureText(subtitle, l.Font, new Size(Width0, int.MaxValue), TextFormatFlags.WordBreak).Height + 6;
-                body.Controls.Add(l);
-                y += l.Height + 6;
-            }
+                Text = title.ToUpperInvariant(), Left = Left0, Top = y, AutoSize = true, UseMnemonic = false,
+                ForeColor = Theme.Muted, Font = new Font("Segoe UI", 8F, FontStyle.Bold)
+            });
+            y += 20;
+            if (subtitle != null) y += Wrapped(subtitle, Left0, y, Width0) + 6;
+        }
+
+        /// <summary>A muted label that wraps within the given width and sizes itself; returns its height.</summary>
+        int Wrapped(string text, int x, int top, int width)
+        {
+            var l = new Label
+            {
+                Text = text, Left = x, Top = top, ForeColor = Theme.Muted, UseMnemonic = false,
+                AutoSize = true, MaximumSize = new Size(width, 0)
+            };
+            body.Controls.Add(l);
+            return l.PreferredHeight > 0 ? l.GetPreferredSize(new Size(width, 0)).Height : l.Height;
         }
 
         CheckBox Toggle(string text, string key, bool fallback, Action after)
@@ -279,10 +321,7 @@ namespace LoqRgb
 
         void Note(string text)
         {
-            var l = new Label { Text = text, Left = Left0 + 22, Top = y - 2, Width = Width0 - 22, ForeColor = Theme.Muted };
-            l.Height = TextRenderer.MeasureText(text, l.Font, new Size(Width0 - 22, int.MaxValue), TextFormatFlags.WordBreak).Height + 6;
-            body.Controls.Add(l);
-            y += l.Height + 6;
+            y += Wrapped(text, Left0 + 22, y - 2, Width0 - 22) + 8;
         }
 
         void Commit()

@@ -88,7 +88,41 @@ namespace LoqRgb
             StartShowListener();
             StartBatteryWatch();
             StartAppRules();
+            StartLenovoMode();
             StartPowerRules();
+        }
+
+        // ---------------------------------------------------------------- Lenovo power mode link (#9)
+
+        PowerModeWatcher lenovoMode;
+        LightState modeState;
+        string modeProfile;
+        bool modeSuspended;
+
+        void StartLenovoMode()
+        {
+            lenovoMode = new PowerModeWatcher();
+            lenovoMode.Changed += m =>
+            {
+                if (IsHandleCreated) BeginInvoke(new Action(() => { modeSuspended = false; EvaluateLenovoMode(); }));
+            };
+            EvaluateLenovoMode();
+        }
+
+        void EvaluateLenovoMode()
+        {
+            string profile = null;
+            if (settings.GetBool(PowerModeWatcher.EnabledKey, false) && !modeSuspended && lenovoMode.Current != LenovoPowerMode.Unknown)
+                profile = settings.GetString(PowerModeWatcher.SettingKey(lenovoMode.Current), null);
+            LightState st = string.IsNullOrEmpty(profile) ? null : AppSettings.LoadProfile(profile);
+            if (st == null) profile = null;
+            if (profile == modeProfile && (st == null) == (modeState == null)) return;
+            modeProfile = profile;
+            modeState = st;
+            ApplyToKeyboard();
+            RefreshUi();
+            RenderStatus();
+            UpdateIcons();
         }
 
         // ---------------------------------------------------------------- power & schedule rules (#8)
@@ -179,6 +213,7 @@ namespace LoqRgb
                 if (mode == 2) return "On battery: lights off";
                 if (mode == 1) return "On battery: low brightness";
             }
+            if (autoState == null && modeState != null) return lenovoMode.Current + " mode: " + modeProfile;
             if (autoState == null && nightState != null) return "Night profile: " + nightName;
             return null;
         }
@@ -454,6 +489,9 @@ namespace LoqRgb
             if (IsHandleCreated) Hotkeys.RegisterAll(Handle, settings);
             nightName = null; // reload the night profile in case it changed
             nightState = null;
+            modeProfile = null; // likewise for the power-mode profile
+            modeState = null;
+            if (lenovoMode != null) EvaluateLenovoMode();
             if (policyTimer.Enabled) EvaluatePolicy();
             ApplyToKeyboard(); // always re-apply: a rule may have just been switched off
             RefreshUi();
@@ -770,6 +808,14 @@ namespace LoqRgb
                 autoState = null;
                 RenderStatus();
             }
+            // ...pauses the power-mode profile until the next Fn+Q...
+            if (modeState != null)
+            {
+                modeSuspended = true;
+                modeState = null;
+                modeProfile = null;
+                RenderStatus();
+            }
             // ...and pauses the night profile until the next night.
             if (nightState != null)
             {
@@ -841,6 +887,7 @@ namespace LoqRgb
             LightState s = settings.State;
             if (s.Effect == Effect.Off) return s;
             if (autoState != null) s = autoState;
+            else if (modeState != null) s = modeState;
             else if (nightState != null) s = nightState;
             if (idleOff || screenOff) return new LightState { Effect = Effect.Off };
             if (onBattery)
@@ -1115,6 +1162,7 @@ namespace LoqRgb
             tray.Visible = false;
             tray.Dispose();
             if (foreground != null) foreground.Dispose();
+            if (lenovoMode != null) lenovoMode.Dispose();
             engine.Dispose();
             base.OnFormClosed(e);
         }
