@@ -15,6 +15,8 @@ namespace LoqRgb
         const string RunName = "LOQKeyboardRGB";
 
         static readonly Effect[] EffectOrder = { Effect.Off, Effect.Static, Effect.Breath, Effect.Wave, Effect.Smooth };
+        static readonly Effect[] SoftwareOrder = { Effect.Audio };
+        static readonly Effect[] AllEffects = EffectOrder.Concat(SoftwareOrder).ToArray();
         static readonly string[] ZoneNames = { "Left", "Center", "Right", "Numpad" };
         static readonly string[] SpeedNames = { "Slow", "Medium", "Fast", "Fastest" };
         static readonly string[] PaletteHex =
@@ -27,7 +29,7 @@ namespace LoqRgb
 
         readonly bool startHidden;
         readonly AppSettings settings;
-        readonly KeyboardController keyboard = new KeyboardController();
+        readonly LightingEngine engine = new LightingEngine();
         readonly bool[] selected = { true, false, false, false };
         readonly Dictionary<Effect, Button> effectButtons = new Dictionary<Effect, Button>();
         readonly Button[] speedButtons = new Button[4];
@@ -59,7 +61,7 @@ namespace LoqRgb
             AutoScaleMode = AutoScaleMode.Dpi;
             Font = new Font("Segoe UI", 9F);
             Text = "LOQ Keyboard RGB";
-            ClientSize = new Size(840, 610);
+            ClientSize = new Size(840, 650);
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;
             StartPosition = FormStartPosition.CenterScreen;
@@ -71,13 +73,16 @@ namespace LoqRgb
 
             if (IsAutoStart()) SetAutoStart(true); // keep the Run entry pointing at this exe if it moved
 
+            engine.StatusChanged += OnEngineStatus;
+            engine.FrameRendered += frame => view.LiveFrame = frame;
+
             RefreshUi();
             RefreshProfiles(null);
             ApplyToKeyboard();
             UpdateIcons();
 
             reapplyTimer.Interval = 2500;
-            reapplyTimer.Tick += delegate { reapplyTimer.Stop(); ApplyToKeyboard(); };
+            reapplyTimer.Tick += delegate { reapplyTimer.Stop(); engine.Reapply(); };
             SystemEvents.PowerModeChanged += OnPowerModeChanged;
             SystemEvents.SessionSwitch += OnSessionSwitch;
             StartShowListener();
@@ -150,24 +155,32 @@ namespace LoqRgb
                 b.Click += delegate { SetEffect(fx); };
                 effectButtons[fx] = b;
             }
+            for (int i = 0; i < SoftwareOrder.Length; i++)
+            {
+                Effect fx = SoftwareOrder[i];
+                Button b = Chip(fx.ToString(), 16 + i * 66, 390, 62, 34);
+                b.Click += delegate { SetEffect(fx); };
+                tips.SetToolTip(b, Effects.Describe(fx));
+                effectButtons[fx] = b;
+            }
 
-            Caption("SPEED", 16, 405);
+            Caption("SPEED", 16, 440);
             for (int i = 0; i < 4; i++)
             {
                 int speed = i + 1;
-                speedButtons[i] = Chip(SpeedNames[i], 16 + i * 100, 425, 94, 34);
+                speedButtons[i] = Chip(SpeedNames[i], 16 + i * 100, 460, 94, 34);
                 speedButtons[i].Click += delegate { settings.State.Speed = speed; Changed(); };
             }
 
-            Caption("BRIGHTNESS", 16, 480);
-            briLow = Chip("Low", 16, 500, 80, 34);
-            briHigh = Chip("High", 102, 500, 80, 34);
+            Caption("BRIGHTNESS", 16, 515);
+            briLow = Chip("Low", 16, 535, 80, 34);
+            briHigh = Chip("High", 102, 535, 80, 34);
             briLow.Click += delegate { SetBrightness(1); };
             briHigh.Click += delegate { SetBrightness(2); };
 
-            Caption("WAVE DIRECTION", 196, 480);
-            dirLtr = Chip("Left → Right", 196, 500, 97, 34);
-            dirRtl = Chip("Right → Left", 299, 500, 97, 34);
+            Caption("WAVE DIRECTION", 196, 515);
+            dirLtr = Chip("Left → Right", 196, 535, 97, 34);
+            dirRtl = Chip("Right → Left", 299, 535, 97, 34);
             dirLtr.Click += delegate { settings.State.WaveRightToLeft = false; Changed(); };
             dirRtl.Click += delegate { settings.State.WaveRightToLeft = true; Changed(); };
 
@@ -219,10 +232,10 @@ namespace LoqRgb
             Button fillAll = Chip("Copy to all zones", rx + 246, 438, 142, 30);
             fillAll.Click += delegate { CopyToAllZones(); };
 
-            Caption("PROFILE", rx, 480);
+            Caption("PROFILE", rx, 515);
             profileBox = new ComboBox
             {
-                Left = rx, Top = 500, Width = 200, DropDownStyle = ComboBoxStyle.DropDownList,
+                Left = rx, Top = 535, Width = 200, DropDownStyle = ComboBoxStyle.DropDownList,
                 FlatStyle = FlatStyle.Flat, BackColor = Theme.Panel, ForeColor = Theme.Text,
                 DrawMode = DrawMode.OwnerDrawFixed, ItemHeight = (int)Math.Round(26 * ScreenDpi() / 96f), Cursor = Cursors.Hand
             };
@@ -234,22 +247,22 @@ namespace LoqRgb
                 if (name != null) LoadProfile(name);
             };
             Controls.Add(profileBox);
-            Button save = Chip("Save as…", rx + 206, 500, 88, 34);
+            Button save = Chip("Save as…", rx + 206, 535, 88, 34);
             save.Click += delegate { SaveProfile(); };
-            Button del = Chip("Delete", rx + 300, 500, 88, 34);
+            Button del = Chip("Delete", rx + 300, 535, 88, 34);
             del.Click += delegate { DeleteProfile(); };
 
             // Footer
-            Controls.Add(new Panel { Left = 16, Top = 552, Width = 808, Height = 1, BackColor = Theme.Border });
-            autoStartBox = Check("Start with Windows", 16, 568);
+            Controls.Add(new Panel { Left = 16, Top = 592, Width = 808, Height = 1, BackColor = Theme.Border });
+            autoStartBox = Check("Start with Windows", 16, 608);
             autoStartBox.Checked = IsAutoStart();
             autoStartBox.CheckedChanged += delegate { SetAutoStart(autoStartBox.Checked); };
-            trayBox = Check("Keep running in the tray when closed", 176, 568);
+            trayBox = Check("Keep running in the tray when closed", 176, 608);
             trayBox.Checked = settings.MinimizeToTray;
             trayBox.CheckedChanged += delegate { settings.MinimizeToTray = trayBox.Checked; settings.Save(); };
             Controls.Add(new Label
             {
-                Left = 444, Top = 570, Width = 380, Height = 20, TextAlign = ContentAlignment.MiddleRight, ForeColor = Theme.Muted,
+                Left = 444, Top = 610, Width = 380, Height = 20, TextAlign = ContentAlignment.MiddleRight, ForeColor = Theme.Muted,
                 Text = "Double-click a zone on the keyboard to pick its color"
             });
         }
@@ -273,7 +286,7 @@ namespace LoqRgb
         void ShowAbout()
         {
             if (!Visible) ShowFromTray();
-            AboutDialog.Show(this, settings.State, keyboard.DeviceName);
+            AboutDialog.Show(this, settings.State, engine.DeviceName);
         }
 
         void BuildTray()
@@ -295,9 +308,10 @@ namespace LoqRgb
             trayMenu.Items.Add(new ToolStripMenuItem(s.Effect == Effect.Off ? "Turn lights on" : "Turn lights off", null, delegate { ToggleLights(); }));
 
             var fxMenu = new ToolStripMenuItem("Effect");
-            foreach (Effect fx in EffectOrder)
+            foreach (Effect fx in AllEffects)
             {
                 if (fx == Effect.Off) continue;
+                if (fx == SoftwareOrder[0]) fxMenu.DropDownItems.Add(new ToolStripSeparator());
                 Effect local = fx;
                 fxMenu.DropDownItems.Add(new ToolStripMenuItem(fx.ToString(), null, delegate { SetEffect(local); }) { Checked = s.Effect == fx });
             }
@@ -395,7 +409,7 @@ namespace LoqRgb
         {
             LightState s = settings.State;
             for (int i = 0; i < 4; i++) if (selected[i]) s.Zones[i] = c;
-            if (s.Effect != Effect.Static && s.Effect != Effect.Breath) s.Effect = Effect.Static;
+            if (!Effects.UsesZoneColors(s.Effect)) s.Effect = Effect.Static;
             Changed();
         }
 
@@ -404,7 +418,7 @@ namespace LoqRgb
             LightState s = settings.State;
             Color c = s.Zones[FirstSelected()];
             for (int i = 0; i < 4; i++) s.Zones[i] = c;
-            if (s.Effect != Effect.Static && s.Effect != Effect.Breath) s.Effect = Effect.Static;
+            if (!Effects.UsesZoneColors(s.Effect)) s.Effect = Effect.Static;
             Changed();
         }
 
@@ -440,7 +454,7 @@ namespace LoqRgb
             LightState s = settings.State;
             foreach (var kv in effectButtons) SetChip(kv.Value, kv.Key == s.Effect);
 
-            bool animated = KeyboardView.IsAnimated(s.Effect);
+            bool animated = Effects.UsesSpeed(s.Effect);
             for (int i = 0; i < 4; i++)
             {
                 speedButtons[i].Enabled = animated;
@@ -478,11 +492,33 @@ namespace LoqRgb
 
         void ApplyToKeyboard()
         {
-            string err;
-            bool ok = keyboard.Apply(settings.State, out err);
-            statusLabel.ForeColor = ok ? Theme.Good : Theme.Bad;
-            statusLabel.Text = ok ? "●  Keyboard connected  ·  " + keyboard.DeviceName : "●  Keyboard not found";
-            tips.SetToolTip(statusLabel, ok ? "Lighting applied to the keyboard." : err);
+            if (!Effects.IsSoftware(settings.State.Effect)) view.LiveFrame = null;
+            engine.SetState(settings.State);
+        }
+
+        void OnEngineStatus(bool ok, string message)
+        {
+            if (InvokeRequired)
+            {
+                if (IsHandleCreated) BeginInvoke(new Action<bool, string>(OnEngineStatus), ok, message);
+                return;
+            }
+            if (!ok)
+            {
+                statusLabel.ForeColor = Theme.Bad;
+                statusLabel.Text = "●  Keyboard not found";
+            }
+            else if (message != null)
+            {
+                statusLabel.ForeColor = Theme.Warn;
+                statusLabel.Text = "●  " + (message.Length > 48 ? message.Substring(0, 47) + "…" : message);
+            }
+            else
+            {
+                statusLabel.ForeColor = Theme.Good;
+                statusLabel.Text = "●  Keyboard connected  ·  " + engine.DeviceName;
+            }
+            tips.SetToolTip(statusLabel, message ?? (ok ? "Lighting applied to the keyboard." : null));
         }
 
         void UpdateIcons()
@@ -646,7 +682,7 @@ namespace LoqRgb
             SystemEvents.SessionSwitch -= OnSessionSwitch;
             tray.Visible = false;
             tray.Dispose();
-            keyboard.Dispose();
+            engine.Dispose();
             base.OnFormClosed(e);
         }
     }

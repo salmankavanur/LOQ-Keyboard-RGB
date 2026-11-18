@@ -17,6 +17,7 @@ namespace LoqRgb
         public static readonly Color Accent = Color.FromArgb(79, 140, 255);
         public static readonly Color Good = Color.FromArgb(74, 222, 128);
         public static readonly Color Bad = Color.FromArgb(248, 113, 113);
+        public static readonly Color Warn = Color.FromArgb(251, 191, 36);
         public static readonly Color KeyCap = Color.FromArgb(26, 29, 36);
         public static readonly Color KeyOffBorder = Color.FromArgb(50, 55, 66);
     }

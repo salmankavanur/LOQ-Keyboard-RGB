@@ -6,8 +6,45 @@ using System.Linq;
 
 namespace LoqRgb
 {
-    /// <summary>Hardware effect codes understood by the keyboard firmware.</summary>
-    public enum Effect { Off = 0, Static = 1, Breath = 3, Wave = 4, Smooth = 6 }
+    /// <summary>
+    /// Values below 100 are hardware effect codes understood by the keyboard firmware.
+    /// Values from 100 are software effects: the app renders frames and streams them as static colours.
+    /// </summary>
+    public enum Effect
+    {
+        Off = 0, Static = 1, Breath = 3, Wave = 4, Smooth = 6,
+        Audio = 100
+    }
+
+    public static class Effects
+    {
+        public static bool IsSoftware(Effect e) { return (int)e >= 100; }
+
+        public static bool IsAnimated(Effect e)
+        {
+            return e == Effect.Breath || e == Effect.Wave || e == Effect.Smooth || IsSoftware(e);
+        }
+
+        public static bool UsesSpeed(Effect e)
+        {
+            return e == Effect.Breath || e == Effect.Wave || e == Effect.Smooth || e == Effect.Audio;
+        }
+
+        /// <summary>Effects whose output is built from the four zone colours.</summary>
+        public static bool UsesZoneColors(Effect e)
+        {
+            return e == Effect.Static || e == Effect.Breath || e == Effect.Audio;
+        }
+
+        public static string Describe(Effect e)
+        {
+            switch (e)
+            {
+                case Effect.Audio: return "Zones react to the sound playing on this PC: bass on the left, treble on the right. Uses your zone colours.";
+                default: return null;
+            }
+        }
+    }
 
     public sealed class LightState
     {
@@ -41,6 +78,8 @@ namespace LoqRgb
                 b[4] = 0;
                 return b;
             }
+            // Software effects fall back to their zone colours when sent as a single report.
+            if (Effects.IsSoftware(Effect)) return FrameReport(Zones, Brightness);
             b[2] = (byte)Effect;
             b[3] = (byte)Math.Max(1, Math.Min(4, Speed));
             b[4] = (byte)Math.Max(1, Math.Min(2, Brightness));
@@ -57,6 +96,24 @@ namespace LoqRgb
             {
                 b[18] = (byte)(WaveRightToLeft ? 0 : 1);
                 b[19] = (byte)(WaveRightToLeft ? 1 : 0);
+            }
+            return b;
+        }
+
+        /// <summary>A static-colour report used to stream software-rendered frames.</summary>
+        public static byte[] FrameReport(Color[] zones, int brightness)
+        {
+            var b = new byte[33];
+            b[0] = 0xCC;
+            b[1] = 0x16;
+            b[2] = (byte)Effect.Static;
+            b[3] = 1;
+            b[4] = (byte)Math.Max(1, Math.Min(2, brightness));
+            for (int z = 0; z < 4; z++)
+            {
+                b[5 + z * 3] = zones[z].R;
+                b[6 + z * 3] = zones[z].G;
+                b[7 + z * 3] = zones[z].B;
             }
             return b;
         }

@@ -185,7 +185,11 @@ namespace LoqRgb
 
         public bool Apply(LightState state, out string error)
         {
-            byte[] report = state.ToReport();
+            return Send(state.ToReport(), out error);
+        }
+
+        public bool Send(byte[] report, out string error)
+        {
             int code = 0;
             for (int attempt = 0; attempt < 2; attempt++)
             {

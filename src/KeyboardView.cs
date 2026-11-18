@@ -107,8 +107,11 @@ namespace LoqRgb
 
         public static bool IsAnimated(Effect e)
         {
-            return e == Effect.Breath || e == Effect.Wave || e == Effect.Smooth;
+            return Effects.IsAnimated(e);
         }
+
+        /// <summary>Latest frame streamed by the lighting engine (software effects). Set from any thread.</summary>
+        public volatile Color[] LiveFrame;
 
         RectangleF ToPx(RectangleF u)
         {
@@ -122,6 +125,12 @@ namespace LoqRgb
             int sp = Math.Max(1, Math.Min(4, s.Speed)) - 1;
             double f = s.Brightness >= 2 ? 1.0 : 0.55;
             Color c;
+            if (Effects.IsSoftware(s.Effect))
+            {
+                Color[] live = LiveFrame;
+                c = live != null ? live[k.Zone] : s.Zones[k.Zone];
+                return Gfx.Scale(c, f);
+            }
             switch (s.Effect)
             {
                 case Effect.Breath:
