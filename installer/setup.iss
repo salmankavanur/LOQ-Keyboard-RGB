@@ -74,11 +74,26 @@ Type: files; Name: "{userprograms}\LOQ Keyboard RGB.lnk"
 
 [Run]
 Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent
+; Automatic updates run this setup silently with /RELAUNCH=tray|show: start the new version again
+Filename: "{app}\{#AppExe}"; Parameters: "{code:RelaunchArgs}"; Flags: nowait; Check: ShouldRelaunch
 
 [UninstallRun]
 Filename: "{app}\{#AppExe}"; Parameters: "--exit"; Flags: runhidden waituntilterminated; RunOnceId: "ExitApp"
 
 [Code]
+function ShouldRelaunch: Boolean;
+begin
+  Result := ExpandConstant('{param:RELAUNCH|}') <> '';
+end;
+
+function RelaunchArgs(Param: String): String;
+begin
+  if CompareText(ExpandConstant('{param:RELAUNCH|}'), 'tray') = 0 then
+    Result := '--tray'
+  else
+    Result := '';
+end;
+
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 var
   ResultCode: Integer;

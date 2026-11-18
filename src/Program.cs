@@ -52,6 +52,7 @@ namespace LoqRgb
                 if (a == "--install") install = true;
                 else if (a == "--uninstall") uninstall = true;
                 else if (a == "--exit") return ExitRunning();
+                else if (a == "--apply-update" && i + 1 < args.Length) return ApplyUpdateFile(args[i + 1]);
                 else if (a == "--quiet") quiet = true;
                 else if (a == "--wait-pid" && i + 1 < args.Length && int.TryParse(args[i + 1], out waitPid)) i++;
                 else if (a == "--tray") tray = true;
@@ -108,6 +109,7 @@ namespace LoqRgb
                     catch { }
                     return 0;
                 }
+                Updates.CleanupAfterUpdate(); // remove the previous exe left by a portable update
                 try { SetProcessDPIAware(); } catch { }
                 Application.EnableVisualStyles();
                 Application.SetCompatibleTextRenderingDefault(false);
@@ -115,6 +117,32 @@ namespace LoqRgb
                 GC.KeepAlive(mutex);
             }
             return 0;
+        }
+
+        /// <summary>
+        /// "--apply-update file": installs an already-downloaded update (the new setup when installed with the
+        /// setup program, otherwise a newer portable exe) the same way the automatic updater does.
+        /// </summary>
+        static int ApplyUpdateFile(string file)
+        {
+            try
+            {
+                file = System.IO.Path.GetFullPath(file);
+                if (!System.IO.File.Exists(file)) return 2;
+                if (!Updates.InstalledBySetup)
+                {
+                    // must be a newer build of this app
+                    System.Reflection.AssemblyName name = System.Reflection.AssemblyName.GetAssemblyName(file);
+                    if (name.Name != "LOQKeyboardRGB" || Updates.ParseTag(name.Version.ToString()) <= Updates.Current) return 2;
+                }
+                ExitRunning();
+                Updates.Apply(file, true); // the updated app comes back in the tray
+                return 0;
+            }
+            catch
+            {
+                return 1;
+            }
         }
 
         /// <summary>

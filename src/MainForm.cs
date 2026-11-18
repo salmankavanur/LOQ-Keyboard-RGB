@@ -90,6 +90,43 @@ namespace LoqRgb
             StartAppRules();
             StartLenovoMode();
             StartPowerRules();
+            StartUpdates();
+        }
+
+        // ---------------------------------------------------------------- automatic updates
+
+        UpdateService updates;
+        Button updateBtn;
+
+        void StartUpdates()
+        {
+            updates = new UpdateService(settings, this, () => !Visible, () => { reallyExit = true; Close(); });
+            updates.Changed += RefreshUpdateButton;
+
+            // First start after an update: say so once.
+            string current = Updates.Current.ToString(3);
+            string last = settings.GetString(UpdateService.LastRunVersionKey, null);
+            if (last != null && last != current && Updates.ParseTag(current) > Updates.ParseTag(last))
+                tray.ShowBalloonTip(4000, "LOQ Keyboard RGB updated", "Now running version " + current + ".", ToolTipIcon.Info);
+            if (last != current)
+            {
+                settings.SetString(UpdateService.LastRunVersionKey, current);
+                settings.Save();
+            }
+        }
+
+        void RefreshUpdateButton()
+        {
+            Updates.Release r = updates.Available;
+            string status = updates.Status ?? "";
+            bool working = status.StartsWith("Downloading") || status.StartsWith("Installing");
+            updateBtn.Visible = r != null || working;
+            updateBtn.Text = working ? (status.Length > 26 ? status.Substring(0, 26) : status)
+                           : r != null ? "⬆  Update to " + r.DisplayVersion : "";
+            updateBtn.Enabled = !working;
+            SetChip(updateBtn, !working);
+            tips.SetToolTip(updateBtn, status.StartsWith("Update failed") ? status : "Download, verify and install the new version. The app restarts by itself.");
+            if (status.StartsWith("Update failed") && r != null) updateBtn.Text = "⬆  Retry update";
         }
 
         // ---------------------------------------------------------------- Lenovo power mode link (#9)
@@ -461,6 +498,9 @@ namespace LoqRgb
             trayBox.Checked = settings.MinimizeToTray;
             trayBox.CheckedChanged += delegate { settings.MinimizeToTray = trayBox.Checked; settings.Save(); };
             tips.SetToolTip(view, "Click a zone to select it · Ctrl+click to select several · double-click to pick its color");
+            updateBtn = Chip("", 520, 602, 176, 32);
+            updateBtn.Visible = false;
+            updateBtn.Click += delegate { if (updates != null) updates.Install(); };
             Button settingsBtn = Chip("⚙  Settings", 704, 602, 120, 32);
             settingsBtn.Click += delegate { ShowSettings(); };
         }

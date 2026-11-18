@@ -67,6 +67,11 @@ Get the latest version from **[Releases](https://github.com/salmankavanur/LOQ-Ke
   Windows Settings → Apps. Running a newer setup updates the app in place and keeps your settings.
 - **`LOQKeyboardRGB-<version>-portable.exe`**: a single exe that runs from anywhere with no installation.
 
+**Automatic updates** (from v1.1.0): about once a day the app checks GitHub Releases. While it's hidden in
+the tray it downloads, verifies and installs a new version by itself, then restarts in the tray. While the
+window is open it shows an **Update to vX** button instead. Every download is checked against its SHA‑256
+checksum before it's installed, and your settings are kept. You can switch this off in **Settings → Updates**.
+
 The files aren't code‑signed, so Windows SmartScreen may show *Windows protected your PC*.
 Click **More info → Run anyway**. Each release lists SHA‑256 checksums so you can verify the files.
 
@@ -106,6 +111,7 @@ LOQKeyboardRGB.exe --flash 00FF00 --times 3  e.g. after a build: npm run build &
 LOQKeyboardRGB.exe --tray                    start hidden in the tray
 LOQKeyboardRGB.exe --install | --uninstall
 LOQKeyboardRGB.exe --exit                    close the running app (used by the setup)
+LOQKeyboardRGB.exe --apply-update <file>     install a downloaded update (new setup or newer portable exe)
 ```
 
 If the app is already running, the command goes to it. Exit code 0 means OK, 1 means the keyboard
@@ -136,7 +142,7 @@ Ambient uses a GDI screen downscale. Power‑mode changes arrive as Lenovo's
 | `src/MainForm.cs`, `KeyboardView.cs` | Main window and the animated keyboard preview |
 | `src/Settings.cs` | Settings window |
 | `src/AppRules.cs`, `Hotkeys.cs`, `PowerMode.cs` | App profiles, global hotkeys, Lenovo Fn+Q mode |
-| `src/Installer.cs`, `Updates.cs` | Per‑user install/uninstall, GitHub update check |
+| `src/Installer.cs`, `Updates.cs` | Per‑user install/uninstall, automatic updates from GitHub Releases |
 | `src/About.cs`, `AssemblyInfo.cs` | About screen and developer details, version info |
 
 ## Build

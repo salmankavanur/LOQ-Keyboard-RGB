@@ -73,7 +73,39 @@ namespace LoqRgb
             BuildLenovoMode();
             BuildAppRules();
             BuildHotkeys();
+            BuildUpdates();
             BuildInstall();
+        }
+
+        void BuildUpdates()
+        {
+            Section("Updates", null);
+            UpdateService svc = UpdateService.Current;
+            if (!UpdateService.Supported || svc == null)
+            {
+                Note("Automatic updates are available in release builds downloaded from GitHub.");
+                return;
+            }
+            Toggle("Check for updates automatically (about once a day)", UpdateService.AutoCheckKey, true, null);
+            Toggle("Install updates automatically while the app is in the tray", UpdateService.AutoInstallKey, true, null);
+            Note("Every download is verified with its SHA-256 checksum before it's installed. Your settings are kept.");
+
+            Button check = Small("Check now", Left0 + 22, y, 110);
+            Button install = Small("Install update", Left0 + 138, y, 120);
+            var status = new Label { Left = Left0 + 266, Top = y + 6, AutoSize = true, ForeColor = Theme.Muted, UseMnemonic = false };
+            body.Controls.Add(status);
+            Action show = () =>
+            {
+                if (status.IsDisposed) return;
+                install.Visible = svc.Available != null;
+                status.Text = svc.Status ?? (svc.Available != null ? "Version " + svc.Available.DisplayVersion + " is available" : "Version " + Updates.Current.ToString(3));
+            };
+            svc.Changed += show;
+            FormClosed += delegate { svc.Changed -= show; };
+            check.Click += delegate { svc.Check(true); };
+            install.Click += delegate { svc.Install(); };
+            show();
+            y += 40;
         }
 
         void BuildInstall()
