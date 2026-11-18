@@ -1,0 +1,12 @@
+# Build output (rebuild with build.cmd)
+bin/
+obj/
+*.pdb
+
+# Editor / OS clutter
+.vs/
+.vscode/
+*.user
+*.suo
+Thumbs.db
+desktop.ini
