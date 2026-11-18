@@ -15,7 +15,7 @@ namespace LoqRgb
         const string RunName = "LOQKeyboardRGB";
 
         static readonly Effect[] EffectOrder = { Effect.Off, Effect.Static, Effect.Breath, Effect.Wave, Effect.Smooth };
-        static readonly Effect[] SoftwareOrder = { Effect.Audio };
+        static readonly Effect[] SoftwareOrder = { Effect.Audio, Effect.Ambient };
         static readonly Effect[] AllEffects = EffectOrder.Concat(SoftwareOrder).ToArray();
         static readonly string[] ZoneNames = { "Left", "Center", "Right", "Numpad" };
         static readonly string[] SpeedNames = { "Slow", "Medium", "Fast", "Fastest" };

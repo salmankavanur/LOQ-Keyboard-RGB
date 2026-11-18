@@ -13,7 +13,7 @@ namespace LoqRgb
     public enum Effect
     {
         Off = 0, Static = 1, Breath = 3, Wave = 4, Smooth = 6,
-        Audio = 100
+        Audio = 100, Ambient = 101
     }
 
     public static class Effects
@@ -27,7 +27,7 @@ namespace LoqRgb
 
         public static bool UsesSpeed(Effect e)
         {
-            return e == Effect.Breath || e == Effect.Wave || e == Effect.Smooth || e == Effect.Audio;
+            return e == Effect.Breath || e == Effect.Wave || e == Effect.Smooth || e == Effect.Audio || e == Effect.Ambient;
         }
 
         /// <summary>Effects whose output is built from the four zone colours.</summary>
@@ -41,6 +41,7 @@ namespace LoqRgb
             switch (e)
             {
                 case Effect.Audio: return "Zones react to the sound playing on this PC: bass on the left, treble on the right. Uses your zone colours.";
+                case Effect.Ambient: return "Each zone takes the average colour of the matching quarter of your screen (games, videos, wallpaper). Speed sets how quickly it follows.";
                 default: return null;
             }
         }

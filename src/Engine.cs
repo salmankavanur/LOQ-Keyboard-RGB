@@ -217,6 +217,7 @@ namespace LoqRgb
             switch (e)
             {
                 case Effect.Audio: return new AudioSource();
+                case Effect.Ambient: return new AmbientSource();
                 default: return new SolidSource();
             }
         }
