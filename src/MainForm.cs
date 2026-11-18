@@ -60,7 +60,7 @@ namespace LoqRgb
             AutoScaleDimensions = new SizeF(96F, 96F);
             AutoScaleMode = AutoScaleMode.Dpi;
             Font = new Font("Segoe UI", 9F);
-            Text = "LOQ Keyboard RGB";
+            Text = Program.MainWindowTitle; // other instances find this window by its title
             ClientSize = new Size(840, 650);
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;
@@ -86,6 +86,7 @@ namespace LoqRgb
             SystemEvents.PowerModeChanged += OnPowerModeChanged;
             SystemEvents.SessionSwitch += OnSessionSwitch;
             StartShowListener();
+            StartBatteryWatch();
         }
 
         // ---------------------------------------------------------------- UI construction
@@ -260,11 +261,9 @@ namespace LoqRgb
             trayBox = Check("Keep running in the tray when closed", 176, 608);
             trayBox.Checked = settings.MinimizeToTray;
             trayBox.CheckedChanged += delegate { settings.MinimizeToTray = trayBox.Checked; settings.Save(); };
-            Controls.Add(new Label
-            {
-                Left = 444, Top = 610, Width = 380, Height = 20, TextAlign = ContentAlignment.MiddleRight, ForeColor = Theme.Muted,
-                Text = "Double-click a zone on the keyboard to pick its color"
-            });
+            tips.SetToolTip(view, "Click a zone to select it · Ctrl+click to select several · double-click to pick its color");
+            Button settingsBtn = Chip("⚙  Settings", 704, 602, 120, 32);
+            settingsBtn.Click += delegate { ShowSettings(); };
         }
 
         static float ScreenDpi()
@@ -281,6 +280,147 @@ namespace LoqRgb
             Color fore = hot ? Color.White : e.Index >= 0 ? Theme.Text : Theme.Muted;
             var r = new Rectangle(e.Bounds.X + 6, e.Bounds.Y, e.Bounds.Width - 6, e.Bounds.Height);
             TextRenderer.DrawText(e.Graphics, text, profileBox.Font, r, fore, TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.EndEllipsis);
+        }
+
+        void ShowSettings()
+        {
+            if (!Visible) ShowFromTray();
+            using (var dlg = new SettingsDialog(settings, OnOptionsChanged, c => engine.Flash(c, 3)))
+                dlg.ShowDialog(this);
+        }
+
+        /// <summary>Called when an option changes in the Settings window.</summary>
+        void OnOptionsChanged()
+        {
+            UpdateShellHook();
+        }
+
+        // ---------------------------------------------------------------- notifications (#5)
+
+        [DllImport("user32.dll")] static extern bool RegisterShellHookWindow(IntPtr hwnd);
+        [DllImport("user32.dll")] static extern bool DeregisterShellHookWindow(IntPtr hwnd);
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int RegisterWindowMessage(string name);
+
+        const int WM_COPYDATA = 0x004A;
+        const int HSHELL_FLASH = 0x8006;
+        int shellHookMsg;
+        bool shellHooked;
+        DateTime lastAttentionFlash = DateTime.MinValue;
+        readonly System.Windows.Forms.Timer batteryTimer = new System.Windows.Forms.Timer();
+        int batteryWarnedAt = 100;
+
+        [StructLayout(LayoutKind.Sequential)]
+        struct COPYDATASTRUCT
+        {
+            public IntPtr dwData;
+            public int cbData;
+            public IntPtr lpData;
+        }
+
+        void UpdateShellHook()
+        {
+            if (!IsHandleCreated) return;
+            bool want = settings.GetBool(Opt.FlashOnAttention, true);
+            if (want && !shellHooked)
+            {
+                if (shellHookMsg == 0) shellHookMsg = RegisterWindowMessage("SHELLHOOK");
+                shellHooked = RegisterShellHookWindow(Handle);
+            }
+            else if (!want && shellHooked)
+            {
+                DeregisterShellHookWindow(Handle);
+                shellHooked = false;
+            }
+        }
+
+        void StartBatteryWatch()
+        {
+            batteryTimer.Interval = 30000;
+            batteryTimer.Tick += delegate { CheckBattery(); };
+            batteryTimer.Start();
+        }
+
+        void CheckBattery()
+        {
+            PowerStatus p = SystemInformation.PowerStatus;
+            if ((p.BatteryChargeStatus & BatteryChargeStatus.NoSystemBattery) != 0 || p.BatteryLifePercent > 1f) return;
+            int pct = (int)Math.Round(p.BatteryLifePercent * 100);
+            if (p.PowerLineStatus == PowerLineStatus.Online)
+            {
+                batteryWarnedAt = 100; // re-arm once charging
+                return;
+            }
+            if (!settings.GetBool(Opt.LowBatteryFlash, true)) return;
+            if (pct <= 10 && batteryWarnedAt > 10)
+            {
+                batteryWarnedAt = 10;
+                engine.Flash(Color.Red, 5);
+            }
+            else if (pct <= 20 && batteryWarnedAt > 20)
+            {
+                batteryWarnedAt = 20;
+                engine.Flash(Color.FromArgb(255, 100, 0), 3);
+            }
+        }
+
+        /// <summary>Commands handed over by another LOQKeyboardRGB.exe started with command-line switches (newline-separated).</summary>
+        void HandleRemoteCommand(string command)
+        {
+            string[] p = command.Split('\n');
+            Color c;
+            switch (p[0])
+            {
+                case "flash":
+                    int times;
+                    if (p.Length < 2 || !Gfx.TryParseHex(p[1], out c)) return;
+                    if (p.Length < 3 || !int.TryParse(p[2], out times)) times = 3;
+                    engine.Flash(c, times);
+                    break;
+                case "profile":
+                    if (p.Length >= 2) LoadProfile(p[1]);
+                    break;
+                case "color":
+                    if (p.Length < 2 || !Gfx.TryParseHex(p[1], out c)) return;
+                    for (int i = 0; i < 4; i++) settings.State.Zones[i] = c;
+                    settings.State.Effect = Effect.Static;
+                    Changed();
+                    break;
+                case "toggle":
+                    ToggleLights();
+                    break;
+                case "off":
+                    if (settings.State.Effect != Effect.Off) SetEffect(Effect.Off);
+                    break;
+                case "on":
+                    if (settings.State.Effect == Effect.Off) SetEffect(settings.LastOnEffect);
+                    break;
+            }
+        }
+
+        protected override void WndProc(ref Message m)
+        {
+            if (m.Msg == WM_COPYDATA)
+            {
+                try
+                {
+                    var cds = (COPYDATASTRUCT)Marshal.PtrToStructure(m.LParam, typeof(COPYDATASTRUCT));
+                    if (cds.dwData == (IntPtr)Program.CopyDataTag && cds.cbData > 0 && cds.cbData < 4096)
+                        HandleRemoteCommand(Marshal.PtrToStringUni(cds.lpData, cds.cbData / 2));
+                    m.Result = (IntPtr)1;
+                }
+                catch { }
+                return;
+            }
+            if (shellHookMsg != 0 && m.Msg == shellHookMsg && (m.WParam.ToInt64() & 0xFFFF) == (HSHELL_FLASH & 0xFFFF))
+            {
+                // Taskbar buttons blink repeatedly; flash at most once every 8 seconds.
+                if ((DateTime.UtcNow - lastAttentionFlash).TotalSeconds > 8)
+                {
+                    lastAttentionFlash = DateTime.UtcNow;
+                    engine.Flash(settings.GetColor(Opt.FlashColor, Opt.DefaultFlashColor), 3);
+                }
+            }
+            base.WndProc(ref m);
         }
 
         void ShowAbout()
@@ -656,6 +796,8 @@ namespace LoqRgb
                 DwmSetWindowAttribute(Handle, 20, ref dark, 4); // immersive dark title bar
             }
             catch { }
+            shellHooked = false;
+            UpdateShellHook();
         }
 
         protected override void OnFormClosing(FormClosingEventArgs e)
@@ -680,6 +822,8 @@ namespace LoqRgb
         {
             SystemEvents.PowerModeChanged -= OnPowerModeChanged;
             SystemEvents.SessionSwitch -= OnSessionSwitch;
+            if (shellHooked) DeregisterShellHookWindow(Handle);
+            batteryTimer.Stop();
             tray.Visible = false;
             tray.Dispose();
             engine.Dispose();

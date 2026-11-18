@@ -174,10 +174,56 @@ namespace LoqRgb
         public static readonly string ProfileDir = Path.Combine(Dir, "Profiles");
         static readonly string FilePath = Path.Combine(Dir, "settings.txt");
 
+        static readonly HashSet<string> CoreKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "minimizeToTray", "trayTipShown", "lastOnEffect", "effect", "speed", "brightness", "waveDirection",
+            "zone1", "zone2", "zone3", "zone4"
+        };
+
         public LightState State = new LightState();
         public bool MinimizeToTray = true;
         public bool TrayTipShown;
         public Effect LastOnEffect = Effect.Static;
+
+        /// <summary>Feature options (notifications, hotkeys, rules…), stored as key=value lines.</summary>
+        readonly SortedDictionary<string, string> options = new SortedDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        public bool GetBool(string key, bool fallback)
+        {
+            string v;
+            return options.TryGetValue(key, out v) ? v == "true" : fallback;
+        }
+
+        public void SetBool(string key, bool value) { options[key] = value ? "true" : "false"; }
+
+        public int GetInt(string key, int fallback)
+        {
+            string v;
+            int n;
+            return options.TryGetValue(key, out v) && int.TryParse(v, out n) ? n : fallback;
+        }
+
+        public void SetInt(string key, int value) { options[key] = value.ToString(); }
+
+        public string GetString(string key, string fallback)
+        {
+            string v;
+            return options.TryGetValue(key, out v) ? v : fallback;
+        }
+
+        public void SetString(string key, string value)
+        {
+            if (value == null) options.Remove(key);
+            else options[key] = value.Replace("\r", " ").Replace("\n", " ");
+        }
+
+        public Color GetColor(string key, Color fallback)
+        {
+            Color c;
+            return Gfx.TryParseHex(GetString(key, null), out c) ? c : fallback;
+        }
+
+        public void SetColor(string key, Color c) { options[key] = Gfx.ToHex(c); }
 
         public static AppSettings Load()
         {
@@ -187,6 +233,8 @@ namespace LoqRgb
                 if (!File.Exists(FilePath)) return s;
                 var d = KeyValues.Read(File.ReadAllLines(FilePath));
                 s.State = LightState.FromValues(d);
+                foreach (var kv in d)
+                    if (!CoreKeys.Contains(kv.Key)) s.options[kv.Key] = kv.Value;
                 string v;
                 Effect e;
                 if (d.TryGetValue("minimizeToTray", out v)) s.MinimizeToTray = v == "true";
@@ -209,6 +257,7 @@ namespace LoqRgb
                     "lastOnEffect=" + LastOnEffect
                 };
                 lines.AddRange(State.ToLines());
+                foreach (var kv in options) lines.Add(kv.Key + "=" + kv.Value);
                 File.WriteAllLines(FilePath, lines);
             }
             catch { }

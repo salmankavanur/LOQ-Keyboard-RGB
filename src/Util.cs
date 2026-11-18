@@ -25,6 +25,17 @@ namespace LoqRgb
     internal static class Gfx
     {
         [DllImport("user32.dll")] static extern bool DestroyIcon(IntPtr handle);
+        [DllImport("dwmapi.dll")] static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
+
+        public static void DarkTitleBar(IntPtr hwnd)
+        {
+            try
+            {
+                int on = 1;
+                DwmSetWindowAttribute(hwnd, 20, ref on, 4);
+            }
+            catch { }
+        }
 
         public static GraphicsPath Rounded(RectangleF r, float radius)
         {
