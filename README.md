@@ -7,6 +7,46 @@ use the same ITE 4‑zone controller.
 Developed by **Salman MP**, Full Stack Developer, DevOps Engineer and Tech Consultant
 (Malappuram, Keralam, India).
 
+<p>
+<img alt="C# 5" src="https://img.shields.io/badge/C%23-5-68217A?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyLjQiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI%2BPHBhdGggZD0iTTggNmwtNiA2IDYgNk0xNiA2bDYgNi02IDZNMTQgNGwtNCAxNiIvPjwvc3ZnPg%3D%3D&logoColor=white" />
+<img alt=".NET Framework 4.8" src="https://img.shields.io/badge/.NET%20Framework-4.8-512BD4?style=for-the-badge&logo=dotnet&logoColor=white" />
+<img alt="Windows Forms" src="https://img.shields.io/badge/Windows%20Forms-UI-0078D4?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyLjIiPjxyZWN0IHg9IjIuNSIgeT0iNCIgd2lkdGg9IjE5IiBoZWlnaHQ9IjE2IiByeD0iMiIvPjxwYXRoIGQ9Ik0yLjUgOWgxOSIgLz48Y2lyY2xlIGN4PSI2IiBjeT0iNi41IiByPSIuNiIgZmlsbD0id2hpdGUiLz48L3N2Zz4%3D&logoColor=white" />
+<img alt="GitHub Actions" src="https://img.shields.io/badge/GitHub%20Actions-CI/CD-2088FF?style=for-the-badge&logo=githubactions&logoColor=white" />
+<img alt="Windows 10/11" src="https://img.shields.io/badge/Windows-10%20|%2011-0078D4?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyLjIiPjxyZWN0IHg9IjIuNSIgeT0iNCIgd2lkdGg9IjE5IiBoZWlnaHQ9IjE2IiByeD0iMiIvPjxwYXRoIGQ9Ik0yLjUgOWgxOSIgLz48Y2lyY2xlIGN4PSI2IiBjeT0iNi41IiByPSIuNiIgZmlsbD0id2hpdGUiLz48L3N2Zz4%3D&logoColor=white" />
+</p>
+
+## Tech stack
+
+<p>
+<img alt="C# 5" src="https://img.shields.io/badge/C%23-5-68217A?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyLjQiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI%2BPHBhdGggZD0iTTggNmwtNiA2IDYgNk0xNiA2bDYgNi02IDZNMTQgNGwtNCAxNiIvPjwvc3ZnPg%3D%3D&logoColor=white" />
+<img alt=".NET Framework 4.8" src="https://img.shields.io/badge/.NET%20Framework-4.8-512BD4?style=for-the-badge&logo=dotnet&logoColor=white" />
+<img alt="Windows Forms" src="https://img.shields.io/badge/Windows%20Forms-UI-0078D4?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyLjIiPjxyZWN0IHg9IjIuNSIgeT0iNCIgd2lkdGg9IjE5IiBoZWlnaHQ9IjE2IiByeD0iMiIvPjxwYXRoIGQ9Ik0yLjUgOWgxOSIgLz48Y2lyY2xlIGN4PSI2IiBjeT0iNi41IiByPSIuNiIgZmlsbD0id2hpdGUiLz48L3N2Zz4%3D&logoColor=white" />
+<img alt="GDI+" src="https://img.shields.io/badge/GDI+-graphics-2B7A78?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyLjIiPjxyZWN0IHg9IjMiIHk9IjMiIHdpZHRoPSIxOCIgaGVpZ2h0PSIxOCIgcng9IjMiLz48Y2lyY2xlIGN4PSI5IiBjeT0iOSIgcj0iMiIgZmlsbD0id2hpdGUiLz48cGF0aCBkPSJNMjEgMTZsLTUtNS05IDEwIi8%2BPC9zdmc%2B&logoColor=white" />
+<img alt="Win32 API" src="https://img.shields.io/badge/Win32%20API-P/Invoke-3A3A3A?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyLjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCI%2BPGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMy4yIi8%2BPHBhdGggZD0iTTEyIDIuNXYzTTEyIDE4LjV2M00yLjUgMTJoM00xOC41IDEyaDNNNS4zIDUuM2wyLjEgMi4xTTE2LjYgMTYuNmwyLjEgMi4xTTUuMyAxOC43bDIuMS0yLjFNMTYuNiA3LjRsMi4xLTIuMSIvPjwvc3ZnPg%3D%3D&logoColor=white" />
+<img alt="USB HID" src="https://img.shields.io/badge/USB%20HID-feature%20reports-E4572E?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyLjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCI%2BPHJlY3QgeD0iNiIgeT0iNiIgd2lkdGg9IjEyIiBoZWlnaHQ9IjEyIiByeD0iMS41Ii8%2BPHBhdGggZD0iTTkgMnY0TTE1IDJ2NE05IDE4djRNMTUgMTh2NE0yIDloNE0yIDE1aDRNMTggOWg0TTE4IDE1aDQiLz48L3N2Zz4%3D&logoColor=white" />
+<img alt="WASAPI" src="https://img.shields.io/badge/WASAPI-audio%20capture-C2185B?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyLjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI%2BPHBhdGggZD0iTTQgOWg0bDUtNHYxNGwtNS00SDR6Ii8%2BPHBhdGggZD0iTTE2LjUgOC41YTUgNSAwIDAgMSAwIDdNMTkgNmE4LjUgOC41IDAgMCAxIDAgMTIiLz48L3N2Zz4%3D&logoColor=white" />
+<img alt="WMI" src="https://img.shields.io/badge/WMI-Lenovo%20events-6A1B9A?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyLjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCI%2BPGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMy4yIi8%2BPHBhdGggZD0iTTEyIDIuNXYzTTEyIDE4LjV2M00yLjUgMTJoM00xOC41IDEyaDNNNS4zIDUuM2wyLjEgMi4xTTE2LjYgMTYuNmwyLjEgMi4xTTUuMyAxOC43bDIuMS0yLjFNMTYuNiA3LjRsMi4xLTIuMSIvPjwvc3ZnPg%3D%3D&logoColor=white" />
+<img alt="PowerShell" src="https://img.shields.io/badge/PowerShell-tooling-012456?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyLjQiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI%2BPHBhdGggZD0iTTQgN2w2IDUtNiA1TTEyIDE4aDgiLz48L3N2Zz4%3D&logoColor=white" />
+<img alt="GitHub Actions" src="https://img.shields.io/badge/GitHub%20Actions-CI/CD-2088FF?style=for-the-badge&logo=githubactions&logoColor=white" />
+<img alt="Git" src="https://img.shields.io/badge/Git-version%20control-F05032?style=for-the-badge&logo=git&logoColor=white" />
+<img alt="Windows 10/11" src="https://img.shields.io/badge/Windows-10%20|%2011-0078D4?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyLjIiPjxyZWN0IHg9IjIuNSIgeT0iNCIgd2lkdGg9IjE5IiBoZWlnaHQ9IjE2IiByeD0iMiIvPjxwYXRoIGQ9Ik0yLjUgOWgxOSIgLz48Y2lyY2xlIGN4PSI2IiBjeT0iNi41IiByPSIuNiIgZmlsbD0id2hpdGUiLz48L3N2Zz4%3D&logoColor=white" />
+</p>
+
+| Technology | Used for |
+|---|---|
+| **C# 5 / .NET Framework 4.8** | The whole app. It's built with the C# compiler that comes with Windows, so you don't need an SDK |
+| **Windows Forms + GDI+** | The dark UI, the animated keyboard preview, owner‑drawn controls, and the generated tray icons |
+| **Win32 API (P/Invoke)** | HID and SetupAPI device access, global hotkeys, the shell hook (taskbar flashes), foreground‑app tracking, idle time, display power notifications, DWM dark title bar |
+| **USB HID feature reports** | Talking to the ITE 4‑zone keyboard controller (`048D:C993`, 33‑byte report) |
+| **WASAPI (Core Audio)** | Loopback capture of what the PC is playing, plus an FFT for the audio visualizer |
+| **GDI** | Fast screen downscaling for the ambient effect |
+| **WMI (System.Management)** | Lenovo Fn+Q power‑mode events (`LENOVO_GAMEZONE_SMART_FAN_MODE_EVENT`) |
+| **Performance counters (System.Diagnostics)** | GPU load for the system monitor effect (the same "GPU Engine" counters Task Manager uses) |
+| **PowerShell** | The icon generator (`tools/make-icon.ps1`) and the CI version stamping |
+| **GitHub Actions** | Building on every push, and publishing releases on version tags |
+| **Git** | Version control, one commit per feature |
+| **Windows 10 / 11** | Target platform. Per‑user install, no admin rights needed |
+
 ## Supported keyboards
 
 | Keyboard | Status |
