@@ -7,6 +7,17 @@ use the same ITE 4‑zone controller.
 Developed by **Salman MP**, Full Stack Developer, DevOps Engineer and Tech Consultant
 (Malappuram, Keralam, India).
 
+## Supported keyboards
+
+| Keyboard | Status |
+|---|---|
+| 4‑zone RGB (ITE `048D:C9xx`, usage page `0xFF89`, 33‑byte report), e.g. LOQ 15IRX9 | ✅ Supported (developed and tested on this laptop) |
+| Per‑key RGB ("Spectrum", 960‑byte report), some Legion models | ⚠️ Detected, not supported yet. The app shows this in its status line |
+| White‑only backlight | ❌ Not supported. Lenovo's driver controls it (Fn+Space) |
+
+The other keyboard types are left out on purpose: their protocols couldn't be tested on this hardware,
+and sending untested commands to keyboard firmware isn't safe.
+
 ## Install / run
 
 Run `LOQKeyboardRGB.exe`. To install it for your user account, open **Settings → Installation → Install for this user**,
@@ -66,6 +77,20 @@ effect: 01 static, 03 breath, 04 wave, 06 smooth   (brightness 0 = off)
 Software effects send a stream of static‑colour reports. Audio uses WASAPI loopback capture and an FFT.
 Ambient uses a GDI screen downscale. Power‑mode changes arrive as Lenovo's
 `LENOVO_GAMEZONE_SMART_FAN_MODE_EVENT` WMI event. Settings and profiles are stored in `%APPDATA%\LOQ Keyboard RGB\`.
+
+## Project layout
+
+| File | Purpose |
+|---|---|
+| `src/Hid.cs` | Finding the keyboard and sending HID feature reports |
+| `src/Model.cs` | Effects, the lighting state and the 33‑byte report, settings, profiles |
+| `src/Engine.cs` | Lighting engine: sends hardware effects once, streams software effects, handles flashes |
+| `src/Audio.cs`, `Ambient.cs`, `Monitor.cs`, `Animations.cs` | Software effects |
+| `src/MainForm.cs`, `KeyboardView.cs` | Main window and the animated keyboard preview |
+| `src/Settings.cs` | Settings window |
+| `src/AppRules.cs`, `Hotkeys.cs`, `PowerMode.cs` | App profiles, global hotkeys, Lenovo Fn+Q mode |
+| `src/Installer.cs`, `Updates.cs` | Per‑user install/uninstall, GitHub update check |
+| `src/About.cs`, `AssemblyInfo.cs` | About screen and developer details, version info |
 
 ## Build
 
