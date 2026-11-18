@@ -10,3 +10,4 @@ obj/
 *.suo
 Thumbs.db
 desktop.ini
+dist/

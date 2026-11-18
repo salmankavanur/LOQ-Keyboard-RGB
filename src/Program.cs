@@ -51,6 +51,7 @@ namespace LoqRgb
                 string a = args[i].ToLowerInvariant();
                 if (a == "--install") install = true;
                 else if (a == "--uninstall") uninstall = true;
+                else if (a == "--exit") return ExitRunning();
                 else if (a == "--quiet") quiet = true;
                 else if (a == "--wait-pid" && i + 1 < args.Length && int.TryParse(args[i + 1], out waitPid)) i++;
                 else if (a == "--tray") tray = true;
@@ -72,12 +73,13 @@ namespace LoqRgb
             if (uninstall || install)
             {
                 Application.EnableVisualStyles();
-                IntPtr other = FindRunningWindow();
-                if (other != IntPtr.Zero)
+                if (uninstall && Installer.SetupUninstaller != null)
                 {
-                    SendCommand(other, "exit"); // close the running copy so its files can be replaced/removed
-                    Thread.Sleep(1500);
+                    // installed with the setup program: its own uninstaller owns the Apps entry
+                    System.Diagnostics.Process.Start(Installer.SetupUninstaller);
+                    return 0;
                 }
+                ExitRunning(); // close the running copy so its files can be replaced/removed
                 if (uninstall) return Installer.Uninstall(quiet);
                 string exe = Installer.Install();
                 if (!quiet) System.Diagnostics.Process.Start(exe);
@@ -112,6 +114,21 @@ namespace LoqRgb
                 Application.Run(new MainForm(tray));
                 GC.KeepAlive(mutex);
             }
+            return 0;
+        }
+
+        /// <summary>
+        /// "--exit": asks a running copy to quit and waits for it (used by the setup program before
+        /// updating or uninstalling, so the exe isn't locked). Always returns 0.
+        /// </summary>
+        static int ExitRunning()
+        {
+            IntPtr other = FindRunningWindow();
+            if (other == IntPtr.Zero) return 0;
+            uint pid;
+            GetWindowThreadProcessId(other, out pid);
+            SendCommand(other, "exit");
+            try { System.Diagnostics.Process.GetProcessById((int)pid).WaitForExit(8000); } catch { }
             return 0;
         }
 

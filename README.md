@@ -58,11 +58,17 @@ Developed by **Salman MP**, Full Stack Developer, DevOps Engineer and Tech Consu
 The other keyboard types are left out on purpose: their protocols couldn't be tested on this hardware,
 and sending untested commands to keyboard firmware isn't safe.
 
-## Install / run
+## Download & install
 
-Run `LOQKeyboardRGB.exe`. To install it for your user account, open **Settings → Installation → Install for this user**,
-or run `LOQKeyboardRGB.exe --install`. Installing adds a Start menu entry and an uninstaller under
-Windows Settings → Apps. You don't need admin rights.
+Get the latest version from **[Releases](https://github.com/salmankavanur/LOQ-Keyboard-RGB/releases/latest)**:
+
+- **`LOQKeyboardRGB-Setup-<version>.exe`** (recommended): installs for your user account with no admin rights.
+  It adds a Start menu entry, an optional desktop shortcut and *Start with Windows*, and an uninstaller in
+  Windows Settings → Apps. Running a newer setup updates the app in place and keeps your settings.
+- **`LOQKeyboardRGB-<version>-portable.exe`**: a single exe that runs from anywhere with no installation.
+
+The files aren't code‑signed, so Windows SmartScreen may show *Windows protected your PC*.
+Click **More info → Run anyway**. Each release lists SHA‑256 checksums so you can verify the files.
 
 ## Lighting
 
@@ -99,6 +105,7 @@ LOQKeyboardRGB.exe --color FF3300            all zones, static
 LOQKeyboardRGB.exe --flash 00FF00 --times 3  e.g. after a build: npm run build && LOQKeyboardRGB --flash 00FF00
 LOQKeyboardRGB.exe --tray                    start hidden in the tray
 LOQKeyboardRGB.exe --install | --uninstall
+LOQKeyboardRGB.exe --exit                    close the running app (used by the setup)
 ```
 
 If the app is already running, the command goes to it. Exit code 0 means OK, 1 means the keyboard
@@ -140,8 +147,11 @@ Run `build.cmd` (or `build.cmd path\to\out.exe`). It uses the C# compiler that c
 ## Releases
 
 GitHub Actions (`.github/workflows/build.yml`) builds every push and pull request. Pushing a tag such as
-`v1.1.0` stamps that version and the repository into the exe and publishes a GitHub Release with the
-exe attached. Release builds can check for updates from **About → Check for updates**. It only contacts
+`v1.1.0` stamps that version and the repository into the exe, builds the setup with Inno Setup
+(`installer/setup.iss`), and publishes a GitHub Release with the setup, the portable exe and their checksums.
+
+To build the setup locally: run `build.cmd`, then `ISCC.exe installer\setup.iss /DAppVersion=1.1.0`
+(you need [Inno Setup 6](https://jrsoftware.org/isinfo.php)). The output goes to `dist\`. Release builds can check for updates from **About → Check for updates**. It only contacts
 GitHub when you click it.
 
 ## Notes

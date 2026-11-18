@@ -36,6 +36,19 @@ namespace LoqRgb
             }
         }
 
+        /// <summary>
+        /// The setup program's uninstaller (Inno Setup's unins000.exe) when the app was installed with
+        /// LOQKeyboardRGB-Setup.exe; null otherwise. That uninstaller then owns the Settings → Apps entry.
+        /// </summary>
+        public static string SetupUninstaller
+        {
+            get
+            {
+                string u = Path.Combine(Path.GetDirectoryName(Application.ExecutablePath), "unins000.exe");
+                return File.Exists(u) ? u : null;
+            }
+        }
+
         public static bool RunningFromInstall
         {
             get { return string.Equals(Path.GetFullPath(Application.ExecutablePath), Path.GetFullPath(InstalledExe), StringComparison.OrdinalIgnoreCase); }
@@ -46,6 +59,9 @@ namespace LoqRgb
         {
             Directory.CreateDirectory(InstallDir);
             if (!RunningFromInstall) File.Copy(Application.ExecutablePath, InstalledExe, true);
+
+            // Installed by the setup program? It already owns the shortcut and the Apps entry; just update the exe.
+            if (File.Exists(Path.Combine(InstallDir, "unins000.exe"))) return InstalledExe;
 
             CreateShortcut(ShortcutPath, InstalledExe, "Control the keyboard backlight of Lenovo LOQ laptops");
 

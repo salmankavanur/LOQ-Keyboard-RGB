@@ -79,13 +79,15 @@ namespace LoqRgb
         void BuildInstall()
         {
             Section("Installation", null);
-            if (Installer.RunningFromInstall)
+            if (Installer.RunningFromInstall || Installer.SetupUninstaller != null)
             {
-                Note("Installed for this user in " + Installer.InstallDir + ". Remove it from Windows Settings → Apps, or here:");
+                Note("Installed for this user in " + System.IO.Path.GetDirectoryName(Application.ExecutablePath) +
+                     ". Remove it from Windows Settings → Apps, or here:");
                 Button un = Small("Uninstall…", Left0 + 22, y, 120);
                 un.Click += delegate
                 {
-                    System.Diagnostics.Process.Start(Installer.InstalledExe, "--uninstall");
+                    if (Installer.SetupUninstaller != null) System.Diagnostics.Process.Start(Installer.SetupUninstaller);
+                    else System.Diagnostics.Process.Start(Installer.InstalledExe, "--uninstall");
                 };
                 y += 40;
             }
