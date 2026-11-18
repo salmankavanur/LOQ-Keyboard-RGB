@@ -13,7 +13,7 @@ namespace LoqRgb
     public enum Effect
     {
         Off = 0, Static = 1, Breath = 3, Wave = 4, Smooth = 6,
-        Audio = 100, Ambient = 101
+        Audio = 100, Ambient = 101, Monitor = 102
     }
 
     public static class Effects
@@ -42,6 +42,7 @@ namespace LoqRgb
             {
                 case Effect.Audio: return "Zones react to the sound playing on this PC: bass on the left, treble on the right. Uses your zone colours.";
                 case Effect.Ambient: return "Each zone takes the average colour of the matching quarter of your screen (games, videos, wallpaper). Speed sets how quickly it follows.";
+                case Effect.Monitor: return "Live system status, green → yellow → red: zone 1 CPU load, zone 2 RAM use, zone 3 GPU load, zone 4 battery (breathes while charging).";
                 default: return null;
             }
         }
